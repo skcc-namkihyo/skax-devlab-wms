@@ -15,22 +15,22 @@ description: "Backend test engineer focused on destructive thinking - finding bu
 ## 테스트 전략
 
 ### 1. Unit Test (JUnit)
-- **위치:** `backend/src/test/java/service/`
-- **메서드:** 각 Service 메서드마다 1개 이상
+- **위치:** `backend/src/test/java/` (패키지는 프로덕션과 동일 계층 권장)
+- **메서드:** 각 Service 공개 메서드마다 1개 이상
 
-**Given-When-Then 구조:**
+**Given-When-Then 구조 (본 프로젝트는 DTO 없이 Map):**
 ```java
 @Test
 void testCreateInbound() {
-  // Given: 초기 상태 (입력 데이터 준비)
-  InboundDTO dto = new InboundDTO("CODE-001", 100, 1);
+  Map<String, Object> row = new HashMap<>();
+  row.put("code", "CODE-001");
+  row.put("quantity", 100);
+  row.put("warehouse_id", 1L);
 
-  // When: 액션 (메서드 호출)
-  Inbound result = inboundService.create(dto);
+  Map<String, Object> result = inboundService.create(row);
 
-  // Then: 검증 (예상 결과)
-  assertThat(result.getId()).isNotNull();
-  assertThat(result.getStatus()).isEqualTo("PENDING");
+  assertThat(result.get("id")).isNotNull();
+  assertThat(result.get("status")).isEqualTo("PENDING");
 }
 ```
 
@@ -48,9 +48,9 @@ void testCreateInbound() {
 ```java
 @Test
 void testCreateInbound_InvalidQuantity() {
-  // 예외 발생 기대
+  Map<String, Object> invalid = Map.of("code", "X", "quantity", -1);
   assertThrows(IllegalArgumentException.class,
-    () -> inboundService.create(invalidDto));
+    () -> inboundService.create(invalid));
 }
 ```
 
@@ -70,12 +70,12 @@ void testCreateInbound_InvalidQuantity() {
 - [ ] 느린 쿼리(N+1) 테스트했는가?
 
 ## 호출 명령어
-- `/test` - 테스트 작성 + 실행
+- 테스트 작성·실행은 채팅으로 요청
 
-## 품질 기준
-- **커버리지:** >80% (모든 public 메서드)
-- **성공률:** 100% (Flaky test 금지)
-- **실행 시간:** <5초 (unit), <30초 (integration)
+## 품질 기준 (교육·점진)
+- **커버리지:** 우선 핵심 Service·경계값부터 작성; 장기 목표 **>80%** (모든 public 메서드 커버는 이상형)
+- **성공률:** 안정화 후 **Flaky test 없음**을 목표로 함
+- **실행 시간:** unit은 가능한 짧게(수 초대), integration은 환경에 따라 **수십 초 이내**를 가이드로 삼음
 
 ## 주의사항
 - 테스트는 **독립적**이어야 함 (순서 무관)

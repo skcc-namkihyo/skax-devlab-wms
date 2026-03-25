@@ -40,21 +40,21 @@ import { useSearch } from "../composables/useSearch.js";
 **예시:**
 
 ```javascript
-export function useInbound() {
-  const { ref, reactive, computed } = window.Vue;
-  const { ElMessage } = window.ElementPlus;
+import { useApi } from "../useApi.js";
 
-  // 상태
+export function useInbound() {
+  const { ref, reactive } = Vue;
+  const { request } = useApi();
+
   const inbounds = ref([]);
   const loading = ref(false);
   const form = reactive({ code: "", quantity: 0 });
 
-  // API 호출
   async function fetchAll() {
     loading.value = true;
     try {
-      const response = await window.useApi("/api/inbound", "GET");
-      inbounds.value = response.data;
+      const data = await request("get", "/inbound", {});
+      inbounds.value = data ?? [];
     } catch (error) {
       ElMessage.error("조회 실패: " + error.message);
     } finally {
@@ -68,7 +68,7 @@ export function useInbound() {
 
 ### Page (화면)
 
-- 위치: `frontend/views/{module}/pages/List.html` 등
+- 위치: `frontend/views/{module}/pages/List.js` 등 (Vue SFC 없음 — **`.js`만**)
 - 역할: Composable 호출, UI 렌더링
 
 ### Component (재사용 컴포넌트)
@@ -90,7 +90,7 @@ export function useInbound() {
 
 - `/gen-ui-design` - UI 설계서(Mock·HTML)
 - `/dev-fe` - FE 스켈레톤·개발 완성 (신규 모듈 시 Skill `fe-scaffold`와 병행)
-- `/integrate` - FE-BE 연동 검증
+- FE-BE 연동 검증은 채팅으로 요청
 
 ## 품질 기준
 
@@ -102,7 +102,7 @@ export function useInbound() {
 ## 주의사항
 
 - **CDN 로딩 순서**: Vue → VueRouter → Element Plus CSS → Element Plus JS → 로케일 → Icons → Tailwind → Axios
-- **개발 서버**: VSCode Live Server (port 5500) 또는 `python -m http.server 8000`
+- **개발 서버**: VSCode Live Server 등 (팀 기준 포트, 예: **3000**)
 - **라우팅 파일**: 모든 라우트는 `frontend/router.js` 중앙 등록 (분산 금지)
 - **메뉴 파일**: 신규 모듈 추가 시 `frontend/sidebar.js`에 메뉴 항목 등록 필수
 - **페이지 위치**: `views/{module}/pages/List.js` 구조 준수

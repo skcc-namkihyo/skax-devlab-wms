@@ -18,7 +18,7 @@ CREATE TABLE wms.adm_userinfo (
     usergroupcode           varchar(20),
     teamcode                varchar(20),
     username                varchar(50),
-    password                bytea,
+    password                varchar(255),
     email                   varchar(60),
     tel                     varchar(40),
     cellphone               varchar(20),

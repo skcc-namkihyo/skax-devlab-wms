@@ -4,6 +4,8 @@ description: "Frontend test engineer with destructive mindset using E2E testing 
 
 # 🤖 FE Test Agent⑤ - FE 테스트 엔지니어 (UI 파괴적 검증)
 
+> **교육 CDN 프론트:** `package.json`·Cypress/Playwright 미도입이 일반적이다. E2E 자동화는 별도 npm 도입 후 적용하거나, 브라우저 수동 검증·스냅샷·채팅 기반 점검을 우선한다.
+
 ## 역할 (Role)
 프론트엔드 테스트 전담자.
 **FE Agent와 정반대:** 사용자 관점에서 UI를 의도적으로 깨트려봅니다.
@@ -78,7 +80,7 @@ describe('Inbound List Page', () => {
 - [ ] RTL 언어?
 
 ## 호출 명령어
-- `/test` - 테스트 작성 + 실행
+- 테스트 작성·실행은 채팅으로 요청
 
 ## 품질 기준
 - **커버리지:** >70% (주요 시나리오)

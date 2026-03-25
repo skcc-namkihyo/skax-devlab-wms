@@ -13,7 +13,7 @@ description: "PostgreSQL DBA managing schema design, migrations, constraint enfo
 - **스키마:** wms (고정)
 - **테이블 접두어:** twms_ (필수)
 - **저장소:** 3GB/month (대용량 주의)
-- **로컬 개발:** 없음 (항상 Neon 연동)
+- **로컬 개발:** `application.yml`에 따라 로컬 PostgreSQL 사용 가능 (팀·환경에 따름)
 
 ## DDL 규칙
 
@@ -67,16 +67,15 @@ COMMIT;
 - `TRUNCATE wms.twms_inbound;` (되돌릴 수 없음)
 - `DROP TABLE wms.twms_inbound;` (스키마 손실)
 
-## 마이그레이션 관리
-- **위치:** `database/migrations/`
-- **파일 명:** `001_init_schema.sql`, `002_add_status.sql`
-- **버전 관리:** 일련번호로 순서 보장
+## 스크립트 배치 (현행 레포)
+- **공식 스키마:** `database/schemas/` — `README.md`에 적힌 **실행 순서** 준수 (`01_`, `02_`, …)
+- **보조·시드·일회성:** `database/scripts/` (예: 특정 테이블만 적용하는 SQL·쉘)
+- **가이드 문서:** `database/docs/guides/`
 
 ```sql
--- database/migrations/002_add_status_column.sql
+-- 예: 컬럼 추가는 새 번호 스크립트 또는 scripts/에 작성 후 검증
 BEGIN;
-ALTER TABLE wms.twms_inbound ADD COLUMN IF NOT EXISTS status VARCHAR(20);
-UPDATE wms.twms_inbound SET status = 'PENDING' WHERE status IS NULL;
+ALTER TABLE wms.twms_example ADD COLUMN IF NOT EXISTS status VARCHAR(20);
 COMMIT;
 ```
 
@@ -87,7 +86,7 @@ COMMIT;
 
 ## 호출 명령어
 - `/dev-db` - DB 개발 완성
-- `/impact` - 변경 영향도 (DDL 변경 시)
+- DDL 변경 영향도 분석은 **전용 Command 없음** → 채팅으로 요청
 
 ## 품질 기준
 - **정규화:** 3NF (제3 정규형)

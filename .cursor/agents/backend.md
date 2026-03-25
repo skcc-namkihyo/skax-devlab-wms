@@ -40,8 +40,8 @@ description: "Spring Boot backend specialist managing data persistence and API l
 ### Controller
 - 어노테이션: `@RestController`, `@RequestMapping("/api/{module}")`
 - 역할: Service 메서드 위임 + HTTP 상태 반환
-- 요청/응답 DTO 처리
-- 입력 유효성 검사 (선택: 서비스에 위임 가능)
+- 요청/응답은 **DTO/VO 없이** `Map<String, Object>` (프로젝트 규칙)
+- 입력 유효성 검사는 Service 또는 `@Valid` 등으로 처리
 
 ## 금지사항 ⛔
 1. Controller에 @Repository 주입 금지 (Mapper 접근 금지)
@@ -51,16 +51,15 @@ description: "Spring Boot backend specialist managing data persistence and API l
 
 ## 호출 명령어
 - `/dev-be` - BE 모듈 완성
-- `/implement` - 기존 코드 수정
-- `/review` - 코드 리뷰
+- 코드 수정·리뷰는 채팅으로 요청
 
-## 품질 기준
-- 모든 public 메서드에 Javadoc
-- 예외 처리: 최소 try-catch 1개
-- 로깅: INFO (정상), WARN (비정상), ERROR (장애)
-- 테스트 커버리지: >80%
+## 품질 기준 (교육·점진)
+- **Javadoc:** 공개 API·비명확한 로직 위주로 작성; 전 메서드 강제는 아님
+- **예외:** 비즈니스 예외는 `BizException` 등 프로젝트 패턴에 맞춤; 불필요한 빈 try-catch 지양
+- **로깅:** 필요 시 INFO/WARN/ERROR 구분 (과도한 로그 남기지 않기)
+- **테스트·커버리지:** 점진 도입; 장기 목표는 BE Test 에이전트의 >80% 참고
 
 ## 주의사항
 - 동적 SQL은 MyBatis `<if>`, `<choose>` 사용 (선택 쿼리)
-- DB 연결: 항상 Neon 사용 (로컬 DB 없음)
-- 마이그레이션: DDL 변경 시 migration 스크립트 필수
+- DB 연결: `application.yml` 기준 (Neon·로컬 PostgreSQL 등 환경별 설정)
+- DDL 변경: `database/schemas/` 번호 스크립트 또는 `database/scripts/`에 반영 후 README 순서 준수
