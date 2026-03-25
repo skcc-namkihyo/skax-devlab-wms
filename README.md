@@ -158,4 +158,24 @@ cd backend
 - [gen-req](.cursor/commands/gen-req.md) · [gen-task](.cursor/commands/gen-task.md) · [gen-ui-design](.cursor/commands/gen-ui-design.md)  
 - [dev-db](.cursor/commands/dev-db.md) · [dev-be](.cursor/commands/dev-be.md) · [dev-fe](.cursor/commands/dev-fe.md)
 
+## 참고: 빌드·기동 스크립트
+
+**백엔드** (JDK 17, 저장소 루트 기준)
+
+```bash
+cd backend
+./gradlew build          # 컴파일·테스트·JAR 생성
+./gradlew bootRun        # 개발 기동 (기본 http://localhost:8080)
+```
+
+**프론트엔드** (`frontend/index.html`을 정적 서버로 제공; API는 위 백엔드 8080과 맞출 것)
+
+```bash
+cd frontend
+# VS Code/Cursor: Live Server로 index.html 열기 (포트 3000 또는 5500 — SecurityConfig CORS 허용)
+# 또는 터미널:
+python3 -m http.server 3000
+# 브라우저: http://localhost:3000
+```
+
 **갱신**: 2026-03-25
