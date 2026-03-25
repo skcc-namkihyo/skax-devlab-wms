@@ -88,6 +88,6 @@ export default defineComponent({
       emit("submit", payload);
     };
 
-    return { formRef, form, rules, submitting, onSubmit };
+    return { formRef, form, rules, onSubmit };
   },
 });
