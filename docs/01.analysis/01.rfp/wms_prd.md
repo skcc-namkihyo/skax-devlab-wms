@@ -108,7 +108,7 @@ WMS의 핵심 프로세스는 다음과 같다.
 
 - 레거시 구조 기반 시스템
 
-- Nexacro 기반 화면 구성
+- vue3 기반 화면 구성
 
 - Map<String, Object> 중심 데이터 처리
 
@@ -266,7 +266,7 @@ WMS의 핵심 프로세스는 다음과 같다.
 
  
 
-### 6.1 Nexacro 화면 구조
+### 6.1 vue3 화면 구조
 
 - 화면 → 컨트롤러 → 서비스 → 맵퍼 구조
 
@@ -356,9 +356,9 @@ WMS의 핵심 프로세스는 다음과 같다.
 
  
 
-### 9.1 Nexacro 화면 구조
+### 9.1 vue3 화면 구조
 
-- Nexacro 기반 화면
+- vue3 기반 화면
 
 - 화면 → 컨트롤러 → 서비스 → 맵퍼 구조
 
@@ -1098,7 +1098,7 @@ CONSTRAINT IDX_TWMS_IV_INVN_LOT_CELL_PK PRIMARY KEY (WH_CD,LOT_NO,WCELL_NO)
 
 ### 15.1 Cursor AI 개발 범위
 
-- Nexacro 화면
+- vue3 화면
 
 - 컨트롤러, 서비스, 맵퍼
 
