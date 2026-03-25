@@ -8,7 +8,7 @@ const routes = [
     component: () => import("./views/auth/Login.js"),
     meta: { public: true },
   },
-  // logs 모듈 — Task wms-005 (배치·이력 조회 UI 스캐폴드)
+  // logs 모듈 — wms-005 배치 로그 / wms-006 이력·감사 조회·재처리 요청
   {
     path: "/logs/list",
     component: () => import("./views/logs/pages/List.js"),

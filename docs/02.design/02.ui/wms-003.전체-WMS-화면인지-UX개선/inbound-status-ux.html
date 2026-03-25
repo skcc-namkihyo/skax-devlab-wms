@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UI 설계서 — 입고 상태 변경 UX | wms-003</title>
+  <script src="https://unpkg.com/vue@3.5.18/dist/vue.global.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus@2.11.4/dist/index.css" />
+  <script src="https://unpkg.com/element-plus@2.11.4/dist/index.full.js"></script>
+  <style>
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; color: #303133; background: #f5f7fa; }
+    .design-meta { background: #fff; border-bottom: 1px solid #e4e7ed; padding: 12px 20px; }
+    .design-meta h1 { margin: 0 0 4px; font-size: 18px; font-weight: 600; }
+    .design-meta p { margin: 0; color: #606266; font-size: 13px; }
+    .split-wrap { display: flex; min-height: calc(100vh - 72px); }
+    .col-ui { flex: 1; min-width: 0; padding: 16px; overflow: auto; background: #fff; border-right: 1px solid #e4e7ed; }
+    .col-spec { width: 400px; flex-shrink: 0; padding: 16px; overflow: auto; background: #fafbfc; }
+    .col-spec h2 { margin: 0 0 12px; font-size: 15px; color: #409eff; }
+    .spec-block { background: #fff; border: 1px solid #e4e7ed; border-radius: 4px; padding: 10px 12px; margin-bottom: 10px; }
+    .spec-block .no { display: inline-block; min-width: 22px; height: 22px; line-height: 22px; text-align: center; background: #409eff; color: #fff; border-radius: 50%; font-size: 12px; margin-right: 8px; vertical-align: middle; }
+    .spec-block h3 { margin: 0; font-size: 13px; font-weight: 600; display: inline; vertical-align: middle; }
+    .spec-block ul { margin: 8px 0 0; padding-left: 18px; color: #606266; font-size: 12px; line-height: 1.5; }
+    .spec-block code { font-size: 11px; background: #f0f2f5; padding: 1px 4px; border-radius: 2px; }
+    .ui-card { background: #fff; border: 1px solid #ebeef5; border-radius: 4px; padding: 16px; }
+    .spec-anchor { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; font-size: 11px; background: #ecf5ff; color: #409eff; border-radius: 4px; margin-left: 6px; font-weight: 600; }
+    .desc-list { margin: 0 0 16px; padding-left: 18px; color: #606266; }
+    .action-row { margin-top: 16px; }
+    .status-badge { margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="design-meta">
+    <h1>입고 주문 — 상태 변경 인지·Confirm·피드백</h1>
+    <p>Task: wms-003 · REQ-WMS-IMPR-001 · PUT /api/inbound/orders/{inbNo}/status (예시)</p>
+  </div>
+  <div class="split-wrap">
+    <section class="col-ui">
+      <div class="ui-card" id="app"></div>
+    </section>
+    <aside class="col-spec">
+      <h2>우측 명세</h2>
+      <div class="spec-block"><span class="no">1</span><h3>주문 요약</h3><ul><li>Mock: <code>inbound-order-mock.json</code></li><li>키: wh_cd, inb_no, inb_scd</li></ul></div>
+      <div class="spec-block"><span class="no">2</span><h3>입고 확정</h3><ul><li>클라이언트 검증 후 <code>ElMessageBox.confirm</code></li><li>처리 중 <code>loading</code> + 중복 클릭 방지</li></ul></div>
+      <div class="spec-block"><span class="no">3</span><h3>응답 피드백</h3><ul><li>성공: <code>result_code</code> I* + 토스트/배지</li><li>실패 시 wms-003 §3.4.2 E2001/E3001 정렬</li></ul></div>
+      <div class="spec-block"><span class="no">4</span><h3>새로고침</h3><ul><li>Mock 데이터 다시 로드</li></ul></div>
+    </aside>
+  </div>
+  <script>
+    const { createApp, ref, onMounted } = Vue;
+    createApp({
+      setup() {
+        const loading = ref(false);
+        const acting = ref(false);
+        const order = ref({});
+        const resultBadge = ref('');
+
+        async function loadOrder() {
+          loading.value = true;
+          try {
+            const res = await fetch('../common/api/v1/inbound-order-mock.json');
+            const json = await res.json();
+            order.value = json.data || {};
+            resultBadge.value = json.data?.inb_scd_name || '';
+          } finally {
+            loading.value = false;
+          }
+        }
+
+        async function confirmStatus() {
+          if (!order.value.inb_no) return;
+          try {
+            await ElementPlus.ElMessageBox.confirm(
+              '입고 확정으로 상태를 변경합니다. 계속하시겠습니까?',
+              '확인',
+              { type: 'warning', confirmButtonText: '확정', cancelButtonText: '취소' }
+            );
+          } catch {
+            return;
+          }
+          acting.value = true;
+          try {
+            const res = await fetch('../common/api/v1/inbound-status-success.json');
+            const json = await res.json();
+            if (String(json.result_code).startsWith('I')) {
+              ElementPlus.ElMessage.success(json.result_message);
+              order.value.inb_scd = json.data?.inb_scd;
+              resultBadge.value = json.data?.inb_scd_name || '';
+            } else {
+              ElementPlus.ElMessage.error(json.result_message || '실패');
+            }
+          } finally {
+            acting.value = false;
+          }
+        }
+
+        onMounted(loadOrder);
+        return { loading, acting, order, resultBadge, loadOrder, confirmStatus };
+      },
+      template: `
+        <div v-loading="loading">
+          <ul class="desc-list">
+            <li>창고: {{ order.wh_cd }} / 입고번호: {{ order.inb_no }} <span class="spec-anchor">1</span></li>
+            <li>상태: <el-tag>{{ resultBadge || order.inb_scd }}</el-tag></li>
+          </ul>
+          <div class="action-row">
+            <el-button type="primary" :loading="acting" :disabled="acting" data-spec-id="2" @click="confirmStatus">입고 확정</el-button>
+            <span class="spec-anchor">2</span>
+            <el-button data-spec-id="4" @click="loadOrder">데이터 새로고침</el-button>
+            <span class="spec-anchor">4</span>
+          </div>
+          <div class="status-badge" data-spec-id="3">
+            <span class="spec-anchor">3</span>
+            <small>결과는 토스트 + 상단 태그로 인지 (TASK 인수 조건)</small>
+          </div>
+        </div>
+      `
+    }).use(ElementPlus).mount('#app');
+  </script>
+</body>
+</html>

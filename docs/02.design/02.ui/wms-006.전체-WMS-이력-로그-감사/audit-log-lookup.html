@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UI 설계서 — 이력·화면 접근 로그 조회 | wms-006</title>
+  <script src="https://unpkg.com/vue@3.5.18/dist/vue.global.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus@2.11.4/dist/index.css" />
+  <script src="https://unpkg.com/element-plus@2.11.4/dist/index.full.js"></script>
+  <style>
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; color: #303133; background: #f5f7fa; }
+    .design-meta { background: #fff; border-bottom: 1px solid #e4e7ed; padding: 12px 20px; }
+    .design-meta h1 { margin: 0 0 4px; font-size: 18px; font-weight: 600; }
+    .design-meta p { margin: 0; color: #606266; font-size: 13px; }
+    .split-wrap { display: flex; min-height: calc(100vh - 72px); }
+    .col-ui { flex: 1; min-width: 0; padding: 16px; overflow: auto; background: #fff; border-right: 1px solid #e4e7ed; }
+    .col-spec { width: 400px; flex-shrink: 0; padding: 16px; overflow: auto; background: #fafbfc; }
+    .col-spec h2 { margin: 0 0 12px; font-size: 15px; color: #409eff; }
+    .spec-block { background: #fff; border: 1px solid #e4e7ed; border-radius: 4px; padding: 10px 12px; margin-bottom: 10px; }
+    .spec-block .no { display: inline-block; min-width: 22px; height: 22px; line-height: 22px; text-align: center; background: #409eff; color: #fff; border-radius: 50%; font-size: 12px; margin-right: 8px; vertical-align: middle; }
+    .spec-block h3 { margin: 0; font-size: 13px; font-weight: 600; display: inline; vertical-align: middle; }
+    .spec-block ul { margin: 8px 0 0; padding-left: 18px; color: #606266; font-size: 12px; line-height: 1.5; }
+    .spec-block code { font-size: 11px; background: #f0f2f5; padding: 1px 4px; border-radius: 2px; }
+    .ui-card { background: #fff; border: 1px solid #ebeef5; border-radius: 4px; padding: 16px; }
+    .spec-anchor { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; font-size: 11px; background: #ecf5ff; color: #409eff; border-radius: 4px; margin-left: 6px; font-weight: 600; }
+    .tabs-wrap { margin-top: 8px; }
+    .spec-footnote { margin-top: 12px; font-size: 12px; color: #606266; }
+  </style>
+</head>
+<body>
+  <div class="design-meta">
+    <h1>상태 변경 이력 · 화면 접근 로그 조회</h1>
+    <p>Task: wms-006 · REQ-WMS-IMPR-004 · GET /api/status-change-histories, /api/screen-access-logs</p>
+  </div>
+  <div class="split-wrap">
+    <section class="col-ui">
+      <div class="ui-card" id="app"></div>
+    </section>
+    <aside class="col-spec">
+      <h2>우측 명세</h2>
+      <div class="spec-block"><span class="no">1</span><h3>탭 전환</h3><ul><li>이력 vs PII 접근 로그 분리</li></ul></div>
+      <div class="spec-block"><span class="no">2</span><h3>상태 이력 그리드</h3><ul><li>Mock: <code>status-change-histories.json</code></li><li>주요 단계만 기록 — 목록 확정 전 골격</li></ul></div>
+      <div class="spec-block"><span class="no">3</span><h3>화면 접근 그리드</h3><ul><li>Mock: <code>screen-access-logs.json</code></li><li>SEARCH/DOWNLOAD/EXPORT</li></ul></div>
+      <div class="spec-block"><span class="no">4</span><h3>권한</h3><ul><li>관리자 계열만 API 접근(wms-002)</li></ul></div>
+    </aside>
+  </div>
+  <script>
+    const { createApp, ref, onMounted } = Vue;
+    createApp({
+      setup() {
+        const loading = ref(false);
+        const histRows = ref([]);
+        const accessRows = ref([]);
+        const activeTab = ref('hist');
+
+        async function loadAll() {
+          loading.value = true;
+          try {
+            const [h, a] = await Promise.all([
+              fetch('../common/api/v1/status-change-histories.json').then((r) => r.json()),
+              fetch('../common/api/v1/screen-access-logs.json').then((r) => r.json())
+            ]);
+            histRows.value = h.data?.list || [];
+            accessRows.value = a.data?.list || [];
+          } finally {
+            loading.value = false;
+          }
+        }
+
+        onMounted(loadAll);
+        return { loading, histRows, accessRows, activeTab, loadAll };
+      },
+      template: `
+        <div v-loading="loading">
+          <el-button size="small" data-spec-id="1" @click="loadAll">데이터 새로고침</el-button>
+          <span class="spec-anchor">1</span>
+          <div class="tabs-wrap">
+            <el-tabs v-model="activeTab" data-spec-id="1">
+              <el-tab-pane label="상태 변경 이력" name="hist">
+                <span class="spec-anchor">2</span>
+                <el-table :data="histRows" border size="small" data-spec-id="2">
+                  <el-table-column prop="record_key" label="레코드키" min-width="140" />
+                  <el-table-column prop="change_type" label="유형" width="90" />
+                  <el-table-column prop="old_status" label="이전" width="80" />
+                  <el-table-column prop="new_status" label="이후" width="80" />
+                  <el-table-column prop="changed_by" label="변경자" width="90" />
+                  <el-table-column prop="changed_at" label="일시" min-width="140" />
+                </el-table>
+              </el-tab-pane>
+              <el-tab-pane label="화면 접근(PII)" name="access">
+                <span class="spec-anchor">3</span>
+                <el-table :data="accessRows" border size="small" data-spec-id="3">
+                  <el-table-column prop="userid" label="사용자" width="100" />
+                  <el-table-column prop="screen_name" label="화면" min-width="120" />
+                  <el-table-column prop="access_type" label="유형" width="100" />
+                  <el-table-column prop="ip_address" label="IP" width="110" />
+                  <el-table-column prop="accessed_at" label="일시" min-width="140" />
+                </el-table>
+              </el-tab-pane>
+            </el-tabs>
+          </div>
+          <div class="spec-footnote" data-spec-id="4"><span class="spec-anchor">4</span> 조회 API는 관리자 권한(wms-002). Mock은 권한 검증 생략.</div>
+        </div>
+      `
+    }).use(ElementPlus).mount('#app');
+  </script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 /**
  * 사이드바 메뉴 정의 (중앙 관리)
- * /gen-ui: logs 모듈 라우트 등록
+ * logs 모듈 라우트 등록
  */
 export const menuItems = [
   {
@@ -19,8 +19,8 @@ export const menuItems = [
         title: "로그·이력",
         icon: "Document",
         children: [
-          { type: "item", path: "/logs/list", title: "로그 목록" },
-          { type: "item", path: "/logs/create", title: "로그 등록" },
+          { type: "item", path: "/logs/list", title: "로그·이력 조회" },
+          { type: "item", path: "/logs/create", title: "재처리 요청" },
         ],
       },
     ],

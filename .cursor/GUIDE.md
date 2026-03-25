@@ -8,12 +8,12 @@
 
 ## 1. 변경 요약: Prompt → 3-Layer
 
-### Before (Prompt 방식)
+### Before (레거시 Prompt 방식 — **참조하지 않음**)
 ```
-"@001 실행해줘" → prompts/001.requirements-definition.prompt.md 전체 로드 (149줄)
-"@005 실행해줘" → prompts/005.backend-dev.prompt.md 전체 로드 (1,586줄)
+"@00x 실행해줘" → prompts/ 이하 `.md` 파일 통째 로드 (삭제 예정)
 ```
-- 매번 전체 프롬프트를 컨텍스트에 로드 → **토큰 낭비**
+- **`.cursor/prompts/*.md`는 삭제 대상**이다. 경로를 문서·프롬프트에 **적지 않는다.**
+- 과거에는 매번 대형 단일 파일을 로드 → **토큰 낭비**
 - Role 정의 + 규칙 + 코드가 한 파일에 혼합 → **수정 시 사이드이펙트**
 
 ### After (3-Layer 방식)
@@ -59,8 +59,8 @@
 | **Lab 0** | *(수동 설정)* | `/init-module` | 프로젝트 초기화 + Spring Boot 공통모듈 13개 파일 자동 생성 |
 | **Lab 1a** | `@001` 요구사항정의서 | `/gen-req` | RFP → 요구사항정의서 (8-Section 템플릿) |
 | **Lab 1b** | `@002` Task 정의서 | `/gen-task` | 요구사항 → Task 정의서 (Mermaid 다이어그램 포함) |
-| **Lab 2a** | `@003` UI 설계서 | `/gen-ui` | Task → FE 파일 스캐폴딩 (빈 템플릿 생성) |
-| **Lab 2b** | `@004` FE 개발 | `/dev-fe` | 스캐폴딩 → 실제 FE 구현 (비즈니스 로직, API 연동) |
+| **Lab 2a** | `@003` UI 설계서 | `/gen-ui-design` | Task → UI 설계서(Mock JSON·HTML) |
+| **Lab 2b** | `@004` FE 개발 | `/dev-fe` | `fe-scaffold` 등으로 스켈레톤 확보 후 실제 FE 구현·API 연동 |
 | **Lab 3** | `@005` BE 개발 | `/dev-be` | Task + FE결과 → BE API 완전 구현 |
 | **Lab 3** | *(005 내 포함)* | `/dev-db` | DB DDL + Mapper XML 생성 |
 | **Lab 4** | *(수동)* | `/integrate` | FE ↔ BE 통합 테스트 |
@@ -119,8 +119,8 @@ Ctrl + L  (또는 Cmd + L)
 |---------|-----------|
 | `/gen-req` | `docs/01.analysis/02.requirements/{시스템명}-{seq}.{메뉴경로}.md` |
 | `/gen-task` | `docs/02.design/01.task/task-{기능명}.md` |
-| `/gen-ui` | `frontend/views/{module}/` (디렉토리 + 스켈레톤 파일) |
-| `/dev-fe` | `frontend/views/{module}/` (완성된 페이지/컴포넌트) |
+| `/gen-ui-design` | `docs/02.design/02.ui/` (HTML·Mock JSON 등 UI 설계 산출물) |
+| `/dev-fe` | `frontend/views/{module}/` (스켈레톤·완성 페이지·컴포넌트; 신규 시 Skill `fe-scaffold` 참고) |
 | `/dev-be` | `backend/src/main/java/{package}/` (Controller/Service/Mapper) |
 | `/dev-db` | `database/ddl/` (DDL 파일) |
 | `/init-module` | `backend/src/main/java/{package}/common/`, `config/`, `auth/` |
@@ -135,7 +135,7 @@ Ctrl + L  (또는 Cmd + L)
 ① /init-module          ← 프로젝트 초기 설정 (최초 1회)
 ② /gen-req              ← RFP → 요구사항정의서
 ③ /gen-task             ← 요구사항 → Task 정의서
-④ /gen-ui               ← Task → FE 스캐폴딩
+④ /gen-ui-design        ← Task → UI 설계서(Mock·HTML)
 ```
 
 ### Day 2: 구현 → 통합
@@ -143,7 +143,7 @@ Ctrl + L  (또는 Cmd + L)
 ```
 ⑤ /dev-be               ← BE API 구현 (공통모듈 자동 확인)
 ⑥ /dev-db               ← DB DDL + Mapper
-⑦ /dev-fe               ← FE 실제 구현 (API 연동)
+⑦ /dev-fe               ← FE 스켈레톤·실제 구현 (API 연동; 신규 시 fe-scaffold)
 ⑧ /integrate            ← FE ↔ BE 통합 확인
 ⑨ /dev-result           ← 결과 산출물 정리
 ```
@@ -153,8 +153,8 @@ Ctrl + L  (또는 Cmd + L)
 ## 6. FAQ
 
 ### Q: "예전처럼 @001 실행해줘" 하면 안 되나요?
-**A**: prompts/ 폴더가 `_archive/`로 이동되어 더 이상 `@` 참조가 동작하지 않습니다.
-대신 `/gen-req`처럼 Command 이름으로 실행하세요.
+**A**: `.cursor/prompts/*.md`는 **삭제 대상**이며 레포 문서에서도 **참조하지 않는다.** `@`로 프롬프트 파일을 붙이는 방식은 쓰지 않는다.
+대신 `/gen-req`, `/gen-task`, `/dev-be` 등 **Command**로 실행하세요.
 
 ### Q: Rule은 어떻게 적용되나요?
 **A**: 자동입니다. 예를 들어 `.java` 파일을 편집하면 `backend.dev.mdc` Rule이 자동 활성화되어
@@ -211,7 +211,7 @@ Ctrl + L  (또는 Cmd + L)
 ├── commands/       ← 22개 (직접 실행)
 │   ├── gen-req.md        ← Lab 1a
 │   ├── gen-task.md       ← Lab 1b
-│   ├── gen-ui.md         ← Lab 2a
+│   ├── gen-ui-design.md  ← Lab 2a
 │   ├── dev-fe.md         ← Lab 2b
 │   ├── dev-be.md         ← Lab 3
 │   ├── dev-db.md         ← Lab 3

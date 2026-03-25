@@ -30,7 +30,7 @@ CREATE USER wms_readonly WITH PASSWORD 'Read@123!@#$%' IN ROLE wms_readonly_role
 -- 3. 데이터베이스 생성
 -- =====================================================
 
-CREATE DATABASE wmsdb OWNER wms_admin;
+-- CREATE DATABASE wmsdb OWNER wms_admin;
 
 -- =====================================================
 -- 중요: 이 스크립트 실행 후

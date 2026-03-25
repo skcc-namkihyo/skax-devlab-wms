@@ -1,0 +1,25 @@
+{
+  "result_code": "I0001",
+  "result_message": "역할·권한 매트릭스 조회",
+  "data": {
+    "features": [
+      { "id": "inb_status", "label": "입·출고 상태 변경" },
+      { "id": "batch_log_view", "label": "배치 로그 조회" },
+      { "id": "batch_retry", "label": "배치 재처리 요청" },
+      { "id": "audit_log_view", "label": "이력·감사 로그 조회" }
+    ],
+    "roles": [
+      { "code": "WORKER", "label": "작업자" },
+      { "code": "MANAGER", "label": "관리자" },
+      { "code": "ADMIN", "label": "시스템관리자" },
+      { "code": "VIEWER", "label": "조회전용" }
+    ],
+    "matrix": {
+      "WORKER": { "inb_status": true, "batch_log_view": false, "batch_retry": false, "audit_log_view": false },
+      "MANAGER": { "inb_status": true, "batch_log_view": true, "batch_retry": true, "audit_log_view": true },
+      "ADMIN": { "inb_status": true, "batch_log_view": true, "batch_retry": true, "audit_log_view": true },
+      "VIEWER": { "inb_status": false, "batch_log_view": false, "batch_retry": false, "audit_log_view": true }
+    },
+    "currentRole": "WORKER"
+  }
+}

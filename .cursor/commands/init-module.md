@@ -30,7 +30,7 @@ description: "풀스택 초기화 (매크로) | Lab 7: Full-Stack Module Initial
   - backend/src/main/java/controller/{Module}Controller.java
 
 ### Phase 3: Frontend (Step 6-10)
-- /gen-ui + /dev-fe 실행
+- /dev-fe 실행 (신규 뷰는 Skill **fe-scaffold**로 스켈레톤을 먼저 두고, 동일 흐름에서 구현 완료)
 - Skills: fe-scaffold, fe-component, fe-composable-util, fe-composable-crud, fe-page-crud
 - 산출물:
   - frontend/views/{module}/ (전체 구조)

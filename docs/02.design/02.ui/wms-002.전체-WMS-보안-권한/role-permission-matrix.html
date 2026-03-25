@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UI 설계서 — 역할·권한 매트릭스 | wms-002</title>
+  <script src="https://unpkg.com/vue@3.5.18/dist/vue.global.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus@2.11.4/dist/index.css" />
+  <script src="https://unpkg.com/element-plus@2.11.4/dist/index.full.js"></script>
+  <style>
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; color: #303133; background: #f5f7fa; }
+    .design-meta { background: #fff; border-bottom: 1px solid #e4e7ed; padding: 12px 20px; }
+    .design-meta h1 { margin: 0 0 4px; font-size: 18px; font-weight: 600; }
+    .design-meta p { margin: 0; color: #606266; font-size: 13px; }
+    .split-wrap { display: flex; min-height: calc(100vh - 72px); }
+    .col-ui { flex: 1; min-width: 0; padding: 16px; overflow: auto; background: #fff; border-right: 1px solid #e4e7ed; }
+    .col-spec { width: 400px; flex-shrink: 0; padding: 16px; overflow: auto; background: #fafbfc; }
+    .col-spec h2 { margin: 0 0 12px; font-size: 15px; color: #409eff; }
+    .spec-block { background: #fff; border: 1px solid #e4e7ed; border-radius: 4px; padding: 10px 12px; margin-bottom: 10px; }
+    .spec-block .no { display: inline-block; min-width: 22px; height: 22px; line-height: 22px; text-align: center; background: #409eff; color: #fff; border-radius: 50%; font-size: 12px; margin-right: 8px; vertical-align: middle; }
+    .spec-block h3 { margin: 0; font-size: 13px; font-weight: 600; display: inline; vertical-align: middle; }
+    .spec-block ul { margin: 8px 0 0; padding-left: 18px; color: #606266; font-size: 12px; line-height: 1.5; }
+    .spec-block code { font-size: 11px; background: #f0f2f5; padding: 1px 4px; border-radius: 2px; }
+    .ui-card { background: #fff; border: 1px solid #ebeef5; border-radius: 4px; padding: 16px; }
+    .spec-anchor { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; font-size: 11px; background: #ecf5ff; color: #409eff; border-radius: 4px; margin-left: 6px; font-weight: 600; }
+    .role-select { width: 200px; }
+    .perm-toolbar { margin-top: 16px; }
+    .perm-table { margin-top: 8px; }
+    .ui-section-title { margin: 8px 0; font-size: 13px; font-weight: 600; color: #606266; }
+  </style>
+</head>
+<body>
+  <div class="design-meta">
+    <h1>역할·권한 매트릭스 · API 시뮬레이션</h1>
+    <p>Task: wms-002 · REQ-WMS-IMPR-005 · JWT + E4001</p>
+  </div>
+  <div class="split-wrap">
+    <section class="col-ui">
+      <div class="ui-card" id="app"></div>
+    </section>
+    <aside class="col-spec">
+      <h2>우측 명세</h2>
+      <div class="spec-block"><span class="no">1</span><h3>역할 선택</h3><ul><li><code>usergroupcode</code> 시뮬레이션. 실제는 JWT 클레임·서버 조회.</li></ul></div>
+      <div class="spec-block"><span class="no">2</span><h3>권한 매트릭스 테이블</h3><ul><li>Task §3.3 표와 동일. O/X는 <code>el-tag</code>.</li></ul></div>
+      <div class="spec-block"><span class="no">3</span><h3>배치 재처리 시뮬</h3><ul><li>WORKER/VIEWER → E4001 토스트. MANAGER/ADMIN → 성공 토스트(Mock).</li><li>실제: <code>POST /api/batch-retry-requests</code> + 서버 인가.</li></ul></div>
+      <div class="spec-block"><span class="no">4</span><h3>이력 조회 시뮬</h3><ul><li>VIEWER만 조회 허용 시 성공 Mock, WORKER는 E4001.</li></ul></div>
+      <div class="spec-block"><span class="no">5</span><h3>미인증</h3><ul><li>교육 프로젝트: 401 처리 + <code>result_code</code> 래핑 여부는 BE 정책.</li></ul></div>
+    </aside>
+  </div>
+  <script>
+    const { createApp, ref, reactive, computed, onMounted } = Vue;
+    createApp({
+      setup() {
+        const loading = ref(false);
+        const matrixData = ref([]);
+        const features = ref([]);
+        const roles = ref([]);
+        const currentRole = ref('WORKER');
+
+        const roleOptions = computed(() => roles.value.map((r) => ({ label: r.label, value: r.code })));
+
+        const tableRows = computed(() => {
+          const m = matrixData.value[currentRole.value] || {};
+          return features.value.map((f) => ({
+            feature: f.label,
+            allowed: !!m[f.id]
+          }));
+        });
+
+        function can(featureId) {
+          const m = matrixData.value[currentRole.value] || {};
+          return !!m[featureId];
+        }
+
+        function simulateBatchRetry() {
+          if (!can('batch_retry')) {
+            ElementPlus.ElMessage.error('권한이 없습니다. (E4001)');
+            return;
+          }
+          ElementPlus.ElMessage.success('[Mock] 재처리 요청 허용됨');
+        }
+
+        function simulateAuditView() {
+          if (!can('audit_log_view')) {
+            ElementPlus.ElMessage.error('권한이 없습니다. (E4001)');
+            return;
+          }
+          ElementPlus.ElMessage.success('[Mock] 이력 조회 허용됨');
+        }
+
+        onMounted(async () => {
+          loading.value = true;
+          try {
+            const res = await fetch('../common/api/v1/role-permissions.json');
+            const json = await res.json();
+            features.value = json.data.features;
+            roles.value = json.data.roles;
+            matrixData.value = json.data.matrix;
+            currentRole.value = json.data.currentRole || 'WORKER';
+          } finally {
+            loading.value = false;
+          }
+        });
+
+        return { loading, currentRole, roleOptions, tableRows, simulateBatchRetry, simulateAuditView };
+      },
+      template: `
+        <div v-loading="loading">
+          <el-form :inline="true">
+            <el-form-item label="역할 시뮬">
+              <el-select v-model="currentRole" class="role-select" data-spec-id="1">
+                <el-option v-for="o in roleOptions" :key="o.value" :label="o.label" :value="o.value" />
+              </el-select>
+              <span class="spec-anchor">1</span>
+            </el-form-item>
+          </el-form>
+          <div class="ui-section-title"><span class="spec-anchor">2</span> 권한 매트릭스 (현재 역할 기준)</div>
+          <el-table :data="tableRows" border data-spec-id="2" class="perm-table">
+            <el-table-column prop="feature" label="기능 영역" />
+            <el-table-column label="허용" width="100">
+              <template #default="{ row }">
+                <el-tag :type="row.allowed ? 'success' : 'info'" size="small">{{ row.allowed ? 'O' : 'X' }}</el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div class="perm-toolbar">
+            <el-button type="primary" data-spec-id="3" @click="simulateBatchRetry">배치 재처리 시뮬</el-button>
+            <span class="spec-anchor">3</span>
+            <el-button data-spec-id="4" @click="simulateAuditView">이력 조회 시뮬</el-button>
+            <span class="spec-anchor">4</span>
+          </div>
+        </div>
+      `
+    }).use(ElementPlus).mount('#app');
+  </script>
+</body>
+</html>

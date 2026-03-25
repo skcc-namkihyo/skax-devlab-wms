@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UI 설계서 — 상태 변경 정합성·E2002 피드백 | wms-004</title>
+  <script src="https://unpkg.com/vue@3.5.18/dist/vue.global.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus@2.11.4/dist/index.css" />
+  <script src="https://unpkg.com/element-plus@2.11.4/dist/index.full.js"></script>
+  <style>
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; color: #303133; background: #f5f7fa; }
+    .design-meta { background: #fff; border-bottom: 1px solid #e4e7ed; padding: 12px 20px; }
+    .design-meta h1 { margin: 0 0 4px; font-size: 18px; font-weight: 600; }
+    .design-meta p { margin: 0; color: #606266; font-size: 13px; }
+    .split-wrap { display: flex; min-height: calc(100vh - 72px); }
+    .col-ui { flex: 1; min-width: 0; padding: 16px; overflow: auto; background: #fff; border-right: 1px solid #e4e7ed; }
+    .col-spec { width: 400px; flex-shrink: 0; padding: 16px; overflow: auto; background: #fafbfc; }
+    .col-spec h2 { margin: 0 0 12px; font-size: 15px; color: #409eff; }
+    .spec-block { background: #fff; border: 1px solid #e4e7ed; border-radius: 4px; padding: 10px 12px; margin-bottom: 10px; }
+    .spec-block .no { display: inline-block; min-width: 22px; height: 22px; line-height: 22px; text-align: center; background: #409eff; color: #fff; border-radius: 50%; font-size: 12px; margin-right: 8px; vertical-align: middle; }
+    .spec-block h3 { margin: 0; font-size: 13px; font-weight: 600; display: inline; vertical-align: middle; }
+    .spec-block ul { margin: 8px 0 0; padding-left: 18px; color: #606266; font-size: 12px; line-height: 1.5; }
+    .spec-block code { font-size: 11px; background: #f0f2f5; padding: 1px 4px; border-radius: 2px; }
+    .ui-card { background: #fff; border: 1px solid #ebeef5; border-radius: 4px; padding: 16px; }
+    .spec-anchor { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; font-size: 11px; background: #ecf5ff; color: #409eff; border-radius: 4px; margin-left: 6px; font-weight: 600; }
+    .desc-list { margin: 0 0 16px; padding-left: 18px; color: #606266; }
+    .action-row { margin-top: 16px; }
+    .error-panel { margin-top: 16px; padding: 12px; background: #fef0f0; border: 1px solid #fde2e2; border-radius: 4px; color: #f56c6c; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="design-meta">
+    <h1>입고 상태 변경 — 롤백/정합성 오류(E2002) 표시</h1>
+    <p>Task: wms-004 · REQ-WMS-IMPR-003 · 서버 트랜잭션 실패 시 UI 안내</p>
+  </div>
+  <div class="split-wrap">
+    <section class="col-ui">
+      <div class="ui-card" id="app"></div>
+    </section>
+    <aside class="col-spec">
+      <h2>우측 명세</h2>
+      <div class="spec-block"><span class="no">1</span><h3>시나리오</h3><ul><li>Mock이 <code>E2002</code>를 반환 → DB 롤백 가정</li><li>화면 상태는 변경 전 값 유지 권장</li></ul></div>
+      <div class="spec-block"><span class="no">2</span><h3>위험 액션</h3><ul><li>Confirm 후 요청. wms-003과 동일 패턴.</li></ul></div>
+      <div class="spec-block"><span class="no">3</span><h3>오류 영역</h3><ul><li><code>result_message</code> 고정 표시 + E2001/E2002 구분(wms-004 §3.4)</li></ul></div>
+    </aside>
+  </div>
+  <script>
+    const { createApp, ref, onMounted } = Vue;
+    createApp({
+      setup() {
+        const loading = ref(false);
+        const acting = ref(false);
+        const order = ref({});
+        const lastError = ref('');
+
+        async function loadOrder() {
+          loading.value = true;
+          lastError.value = '';
+          try {
+            const res = await fetch('../common/api/v1/inbound-order-mock.json');
+            const json = await res.json();
+            order.value = json.data || {};
+          } finally {
+            loading.value = false;
+          }
+        }
+
+        async function tryChange() {
+          try {
+            await ElementPlus.ElMessageBox.confirm('상태 변경을 요청합니다(정합성 실패 Mock).', '확인', { type: 'warning' });
+          } catch {
+            return;
+          }
+          acting.value = true;
+          lastError.value = '';
+          try {
+            const res = await fetch('../common/api/v1/inbound-status-e2002.json');
+            const json = await res.json();
+            if (String(json.result_code).startsWith('E')) {
+              lastError.value = json.result_message || json.result_code;
+              ElementPlus.ElMessage.error(lastError.value);
+            }
+          } finally {
+            acting.value = false;
+          }
+        }
+
+        onMounted(loadOrder);
+        return { loading, acting, order, lastError, loadOrder, tryChange };
+      },
+      template: `
+        <div v-loading="loading">
+          <ul class="desc-list">
+            <li>{{ order.wh_cd }} / {{ order.inb_no }} <span class="spec-anchor">1</span></li>
+            <li>현재 상태 코드: {{ order.inb_scd }}</li>
+          </ul>
+          <div class="action-row">
+            <el-button type="danger" plain :loading="acting" data-spec-id="2" @click="tryChange">상태 변경 요청 (E2002 Mock)</el-button>
+            <span class="spec-anchor">2</span>
+            <el-button data-spec-id="1" @click="loadOrder">초기화</el-button>
+            <span class="spec-anchor">1</span>
+          </div>
+          <div v-if="lastError" class="error-panel" data-spec-id="3">
+            <span class="spec-anchor">3</span>
+            {{ lastError }}
+          </div>
+        </div>
+      `
+    }).use(ElementPlus).mount('#app');
+  </script>
+</body>
+</html>

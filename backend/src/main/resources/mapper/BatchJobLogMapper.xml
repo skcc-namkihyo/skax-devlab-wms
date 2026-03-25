@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.execnt.wms.mapper.BatchJobLogMapper">
+
+    <sql id="batchJobWhere">
+        <where>
+            <if test="wh_cd != null and wh_cd != ''">
+                AND wh_cd ILIKE '%' || #{wh_cd} || '%'
+            </if>
+            <if test="batch_type != null and batch_type != ''">
+                AND batch_type = #{batch_type}
+            </if>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectBatchJobLogList" parameterType="map" resultType="map">
+        SELECT batch_log_id,
+               wh_cd,
+               batch_type,
+               batch_name,
+               start_datetime,
+               end_datetime,
+               status,
+               total_count,
+               success_count,
+               error_count,
+               skip_count,
+               error_message
+        FROM wms.batch_job_log
+        <include refid="batchJobWhere"/>
+        ORDER BY start_datetime DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countBatchJobLogList" parameterType="map" resultType="int">
+        SELECT COUNT(*)::int
+        FROM wms.batch_job_log
+        <include refid="batchJobWhere"/>
+    </select>
+
+    <select id="selectBatchJobLogById" parameterType="map" resultType="map">
+        SELECT batch_log_id,
+               wh_cd,
+               batch_type,
+               batch_name,
+               start_datetime,
+               end_datetime,
+               status,
+               total_count,
+               success_count,
+               error_count,
+               skip_count,
+               error_message
+        FROM wms.batch_job_log
+        WHERE batch_log_id = #{batch_log_id}
+    </select>
+
+    <select id="selectBatchErrorLogByBatchLogId" parameterType="map" resultType="map">
+        SELECT error_log_id,
+               batch_log_id,
+               ref_no,
+               ref_detl_no,
+               error_code,
+               error_message,
+               retry_count,
+               retry_status,
+               ins_datetime
+        FROM wms.batch_error_log
+        WHERE batch_log_id = #{batch_log_id}
+        ORDER BY error_log_id ASC
+    </select>
+
+    <select id="countBatchErrorLogByBatchLogId" parameterType="map" resultType="int">
+        SELECT COUNT(*)::int
+        FROM wms.batch_error_log
+        WHERE batch_log_id = #{batch_log_id}
+    </select>
+
+    <select id="countResolvedRetryForRef" parameterType="map" resultType="int">
+        SELECT COUNT(*)::int
+        FROM wms.batch_error_log
+        WHERE batch_log_id = #{batch_log_id}
+          AND ref_no = #{ref_no}
+          AND retry_status = 'RESOLVED'
+    </select>
+</mapper>

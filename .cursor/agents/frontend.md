@@ -88,8 +88,8 @@ export function useInbound() {
 
 ## 호출 명령어
 
-- `/gen-ui` - UI 스캐폴딩
-- `/dev-fe` - FE 개발 완성
+- `/gen-ui-design` - UI 설계서(Mock·HTML)
+- `/dev-fe` - FE 스켈레톤·개발 완성 (신규 모듈 시 Skill `fe-scaffold`와 병행)
 - `/integrate` - FE-BE 연동 검증
 
 ## 품질 기준

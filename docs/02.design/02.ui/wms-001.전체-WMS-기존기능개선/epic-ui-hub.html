@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UI 설계서 허브 — wms-001 Epic</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus@2.11.4/dist/index.css" />
+  <style>
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; color: #303133; background: #f5f7fa; }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 24px; }
+    .card { background: #fff; border: 1px solid #ebeef5; border-radius: 4px; padding: 20px; margin-bottom: 16px; }
+    h1 { margin: 0 0 8px; font-size: 20px; }
+    .muted { color: #909399; font-size: 13px; margin-bottom: 16px; }
+    ul { margin: 0; padding-left: 20px; line-height: 1.8; }
+    a { color: #409eff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .split-hint { font-size: 12px; color: #606266; margin-top: 16px; padding: 12px; background: #ecf5ff; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>wms-001 전체-WMS-기존기능개선 — UI 설계서 진입</h1>
+      <p class="muted">Epic 개요 Task. 하위 Task별 상세 화면은 각 <code>wms-00x</code> 폴더의 HTML을 우선한다.</p>
+      <ul>
+        <li><strong>본 Epic 화면(예시)</strong>: <a href="./batch-job-log-list.html">batch-job-log-list.html</a> — 배치 로그·오류·재처리(Mock)</li>
+        <li><a href="../wms-002.전체-WMS-보안-권한/role-permission-matrix.html">wms-002 보안·권한</a></li>
+        <li><a href="../wms-003.전체-WMS-화면인지-UX개선/inbound-status-ux.html">wms-003 화면 인지·UX</a></li>
+        <li><a href="../wms-004.전체-WMS-상태변경-정합성/inbound-status-consistency.html">wms-004 상태 변경·정합성</a></li>
+        <li><a href="../wms-005.전체-WMS-배치-주문생성개선/batch-req002-spec.html">wms-005 배치 개선(명세·프로토타입 참조)</a></li>
+        <li><a href="../wms-006.전체-WMS-이력-로그-감사/audit-log-lookup.html">wms-006 이력·로그·감사</a></li>
+      </ul>
+      <p class="split-hint">각 화면은 좌(UI 프로토타입)·우(명세) 2분할을 따른다. 본 허브는 단일 열 안내 전용이다.</p>
+    </div>
+  </div>
+</body>
+</html>

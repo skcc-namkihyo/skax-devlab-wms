@@ -1,0 +1,53 @@
+{
+  "result_code": "I0001",
+  "result_message": "배치 실행 이력 조회 성공",
+  "data": {
+    "list": [
+      {
+        "batch_log_id": 1001,
+        "wh_cd": "WH01",
+        "batch_type": "INBOUND_ORDER",
+        "batch_name": "입고주문생성",
+        "status": "PARTIAL",
+        "total_count": 1200,
+        "success_count": 1180,
+        "error_count": 15,
+        "skip_count": 5,
+        "error_message": "일부 참조번호 유효성 오류",
+        "start_datetime": "2026-03-25T01:00:00",
+        "end_datetime": "2026-03-25T01:12:33"
+      },
+      {
+        "batch_log_id": 1002,
+        "wh_cd": "WH01",
+        "batch_type": "OUTBOUND_ORDER",
+        "batch_name": "출고주문생성",
+        "status": "COMPLETED",
+        "total_count": 800,
+        "success_count": 800,
+        "error_count": 0,
+        "skip_count": 0,
+        "error_message": null,
+        "start_datetime": "2026-03-24T22:00:00",
+        "end_datetime": "2026-03-24T22:05:10"
+      },
+      {
+        "batch_log_id": 1003,
+        "wh_cd": "WH02",
+        "batch_type": "INBOUND_ORDER",
+        "batch_name": "입고주문생성",
+        "status": "FAILED",
+        "total_count": 500,
+        "success_count": 0,
+        "error_count": 500,
+        "skip_count": 0,
+        "error_message": "DB 연결 타임아웃",
+        "start_datetime": "2026-03-24T18:00:00",
+        "end_datetime": "2026-03-24T18:00:45"
+      }
+    ],
+    "total": 3,
+    "page": 1,
+    "pageSize": 10
+  }
+}

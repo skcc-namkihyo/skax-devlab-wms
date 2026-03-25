@@ -2,7 +2,7 @@
 
 ## 개요
 
-이 프로젝트는 AI 프롬프트를 순차적으로 사용하여 요구사항 정의서부터 설계 문서, 그리고 Frontend/Backend 소스코드까지 자동으로 생성하는 체계적인 개발 프로세스를 제공합니다.
+이 프로젝트는 Cursor **Commands**(`.cursor/commands/*.md`)를 순차적으로 사용하여 요구사항 정의서부터 설계 문서, 그리고 Frontend/Backend 소스코드까지 자동으로 생성하는 체계적인 개발 프로세스를 제공합니다. **`.cursor/prompts/*.md`는 삭제 대상이며 문서·워크플로우에서 참조하지 않는다.**
 
 **대상 시스템**: WMS (창고관리시스템) - 입출고, 재고 관리, 배치 처리 등
 
@@ -10,11 +10,11 @@
 
 ```mermaid
 graph TD
-    A[WMS PRD / 요구사항 정의서] --> B[002. Task 정의서 작성]
-    B --> C[003. UI 설계서 작성]
-    C --> D[004. Frontend 개발]
-    D --> E[005. Backend 개발]
-    E --> F[006. Frontend-Backend 연동]
+    A[WMS PRD / 요구사항 정의서] --> B[Task 정의서 /gen-task]
+    B --> C[UI 설계서 /gen-ui-design]
+    C --> D[Frontend /dev-fe]
+    D --> E[Backend /dev-be]
+    E --> F[연동 /integrate]
     
     B --> B1[Task 정의서<br/>docs/02.design/01.tasks/]
     C --> C1[UI 설계서 HTML<br/>docs/02.design/02.ui/]
@@ -40,11 +40,12 @@ graph TD
 | **데이터 처리** | 저장 프로시저 (PostgreSQL Function) | PRD 섹션 7.1 |
 | **API 구조** | Non-REST (Nexacro 연동) | REST API 미사용 (PRD 섹션 10.3) |
 
-## 프롬프트 사용 가이드
+## Cursor 커맨드 사용 가이드
 
 ### 1단계: Task 정의서 작성
 
-**프롬프트**: `.cursor/prompts/002.task-generation.prompt.md`
+**Cursor 커맨드**: `/gen-task` (`.cursor/commands/gen-task.md`)  
+**선행(선택)**: 요구사항 정형화는 `/gen-req` (`.cursor/commands/gen-req.md`)
 
 **입력**:
 - WMS PRD / 요구사항 정의서 (`docs/01.analysis/01.rfp/wms_prd.md`)
@@ -74,7 +75,7 @@ graph TD
 
 ### 2단계: UI 설계서 작성
 
-**프롬프트**: `.cursor/prompts/003.ui-design.prompt.md`
+**Cursor 커맨드**: `/gen-ui-design` (`.cursor/commands/gen-ui-design.md`)
 
 **입력**:
 - Task 정의서 (`docs/02.design/01.tasks/wms-XXX.task.md`)
@@ -88,19 +89,19 @@ graph TD
 - UI 설계서 HTML 파일 (좌측 UI 영역 + 우측 명세 영역)
 - Mock 데이터 JSON 파일 (Backend API 응답 형식과 동일)
 
-**참조 Rules**:
-- `.cursor/.rules/frontend.ui-design.instructions.mdc` - UI 설계서 작성 표준
-- `.cursor/.rules/frontend.uiux.instructions.mdc` - 스타일링 및 디자인 시스템
-- `.cursor/.rules/frontend.component.instructions.mdc` - UI 컴포넌트 사용 규칙
+**참조**:
+- `.cursor/commands/gen-ui-design.md` — UI 설계서 작성 절차(좌측 UI + 우측 명세, Mock JSON)
+- `.cursor/rules/frontend.ui-design.mdc` — UI/UX 디자인 시스템
+- `.cursor/rules/frontend.dev.mdc` — 프론트엔드 스택·API 관례
+- `.cursor/rules/frontend.component.mdc` — Vue·Element Plus 컴포넌트 규칙
 
-**DB 스키마 참조**:
-- `database/schemas/*.sql` - 스키마 생성, 권한, 테이블 생성 관련 파일 동적 참조
+**DB 스키마 참조** (선택): Mock만으로 설계할 때는 생략 가능. 테이블 정합성이 필요하면 `database/schemas/*.sql` 등을 참조한다.
 
 ---
 
 ### 3단계: Frontend 개발
 
-**프롬프트**: `.cursor/prompts/004.frontend-dev.prompt.md`
+**Cursor 커맨드**: `/dev-fe` (`.cursor/commands/dev-fe.md`)
 
 **입력**:
 - Task 정의서 (`docs/02.design/01.tasks/wms-XXX.task.md`)
@@ -129,7 +130,7 @@ graph TD
 
 ### 4단계: Backend 개발
 
-**프롬프트**: `.cursor/prompts/005.backend-dev.prompt.md`
+**Cursor 커맨드**: `/dev-be` (`.cursor/commands/dev-be.md`)
 
 **입력**:
 - Task 정의서 (`docs/02.design/01.tasks/wms-XXX.task.md`)
@@ -156,8 +157,8 @@ graph TD
 - `.cursor/.rules/backend.db.standard.instructions.mdc` - DBMS 제품 독립 표준 SQL 및 MyBatis 개발 규칙
 - `.cursor/.rules/postgresql-standard-rule.mdc` - PostgreSQL 특화 SQL 작성 규칙
 
-**프롬프트 실행 전 필수 절차**:
-프롬프트 실행 전 반드시 다음 프로젝트 설정 정보를 사용자에게 질의하여 확인해야 합니다:
+**커맨드 실행 전 필수 절차**:
+`/dev-be` 실행 전 반드시 다음 프로젝트 설정 정보를 사용자에게 질의하여 확인해야 합니다:
 
 1. **프로젝트명**: 프로젝트의 전체 이름 (예: "WMS 창고관리시스템")
 2. **프로젝트 간단명**: 프로젝트의 간단한 이름 (예: "WMS")
@@ -185,7 +186,7 @@ graph TD
 
 ### 5단계: Frontend-Backend 연동
 
-**프롬프트**: `.cursor/prompts/005.backend-dev.prompt.md` (6단계)
+**Cursor 커맨드**: `/integrate` (`.cursor/commands/integrate.md`)
 
 **입력**:
 - Frontend 개발 결과 문서
@@ -209,11 +210,13 @@ graph TD
 ```
 skax-devlab-carcenter-wms/
 ├── .cursor/
-│   ├── prompts/                    # AI 프롬프트 파일
-│   │   ├── 002.task-generation.prompt.md
-│   │   ├── 003.ui-design.prompt.md
-│   │   ├── 004.frontend-dev.prompt.md
-│   │   └── 005.backend-dev.prompt.md
+│   ├── commands/                   # Cursor 슬래시 커맨드 (진입점)
+│   │   ├── gen-req.md
+│   │   ├── gen-task.md
+│   │   ├── gen-ui-design.md
+│   │   ├── dev-fe.md
+│   │   ├── dev-be.md
+│   │   └── integrate.md
 │   └── .rules/                     # 개발 지침 파일
 │       ├── project.common.instructions.mdc
 │       ├── backend.dev.instructions.mdc
@@ -286,8 +289,8 @@ skax-devlab-carcenter-wms/
 ### 1. Task 정의서 작성
 
 ```bash
-# Cursor에서 프롬프트 실행
-# 프롬프트: .cursor/prompts/002.task-generation.prompt.md
+# Cursor에서 커맨드 실행
+# 커맨드: /gen-task (.cursor/commands/gen-task.md)
 # 입력: WMS PRD 첨부 (docs/01.analysis/01.rfp/wms_prd.md)
 # 출력: docs/02.design/01.tasks/wms-XXX.task.md
 ```
@@ -301,8 +304,8 @@ skax-devlab-carcenter-wms/
 ### 2. UI 설계서 작성
 
 ```bash
-# Cursor에서 프롬프트 실행
-# 프롬프트: .cursor/prompts/003.ui-design.prompt.md
+# Cursor에서 커맨드 실행
+# 커맨드: /gen-ui-design (.cursor/commands/gen-ui-design.md)
 # 입력: Task 정의서 첨부
 # 출력: docs/02.design/02.ui/{{fileName}}/[파일명].html
 ```
@@ -310,8 +313,8 @@ skax-devlab-carcenter-wms/
 ### 3. Frontend 개발
 
 ```bash
-# Cursor에서 프롬프트 실행
-# 프롬프트: .cursor/prompts/004.frontend-dev.prompt.md
+# Cursor에서 커맨드 실행
+# 커맨드: /dev-fe (.cursor/commands/dev-fe.md)
 # 입력: Task 정의서 + UI 설계서 HTML 첨부
 # 출력: frontend/ 소스코드 + 개발 결과 문서
 ```
@@ -319,8 +322,8 @@ skax-devlab-carcenter-wms/
 ### 4. Backend 개발
 
 ```bash
-# Cursor에서 프롬프트 실행
-# 프롬프트: .cursor/prompts/005.backend-dev.prompt.md
+# Cursor에서 커맨드 실행
+# 커맨드: /dev-be (.cursor/commands/dev-be.md)
 # 입력: Task 정의서 + Frontend 개발 결과 문서 첨부
 # 출력: backend/ 소스코드 + 개발 결과 문서
 ```
@@ -336,8 +339,8 @@ skax-devlab-carcenter-wms/
 ### 5. Frontend-Backend 연동
 
 ```bash
-# Cursor에서 프롬프트 실행
-# 프롬프트: .cursor/prompts/005.backend-dev.prompt.md (6단계)
+# Cursor에서 커맨드 실행
+# 커맨드: /integrate (.cursor/commands/integrate.md)
 # 입력: Frontend 개발 결과 문서 + Backend 개발 결과 문서
 # 출력: 연동 결과 문서 + Frontend 소스코드 수정
 ```
@@ -348,11 +351,12 @@ skax-devlab-carcenter-wms/
 
 ### 필수 준수 사항
 
-1. **프롬프트 순서 준수**: 반드시 002 → 003 → 004 → 005 순서로 실행
-2. **입력 파일 확인**: 각 프롬프트 실행 전 필수 입력 파일 첨부 확인
-3. **Rules 파일 준수**: 각 프롬프트에서 참조하는 Rules 파일 반드시 준수
+1. **커맨드 순서 준수**: `/gen-task` → `/gen-ui-design` → `/dev-fe` → `/dev-be` → `/integrate` 순으로 실행
+2. **입력 파일 확인**: 각 커맨드 실행 전 필수 입력 파일 첨부 확인
+3. **Rules 파일 준수**: `.cursor/rules/*.mdc` 지침 준수
 4. **사용자 확인**: 각 단계별 작업 계획은 사용자 확인 후 실행 (자동 실행 금지)
-5. **프로젝트 설정 정보 질의**: Backend 개발 프롬프트 실행 전 반드시 프로젝트 설정 정보 질의 완료
+5. **프로젝트 설정 정보 질의**: `/dev-be` 실행 전 반드시 프로젝트 설정 정보 질의 완료
+6. **`.cursor/prompts/*.md`**: 삭제 대상 — 링크·참조하지 않음
 
 ### API 응답 형식 통일
 
@@ -379,12 +383,14 @@ skax-devlab-carcenter-wms/
 
 ## 상세 문서
 
-각 프롬프트의 상세 사용법은 해당 프롬프트 파일을 참조하세요:
+워크플로우 진입점은 **`.cursor/commands/*.md`** 를 참조한다. **`.cursor/prompts/*.md`는 삭제 대상이며 참조하지 않는다.**
 
-- [Task 정의서 작성 프롬프트](.cursor/prompts/002.task-generation.prompt.md)
-- [UI 설계서 작성 프롬프트](.cursor/prompts/003.ui-design.prompt.md)
-- [Frontend 개발 프롬프트](.cursor/prompts/004.frontend-dev.prompt.md)
-- [Backend 개발 프롬프트](.cursor/prompts/005.backend-dev.prompt.md)
+- [요구사항 정의 `/gen-req`](.cursor/commands/gen-req.md)
+- [Task 분해 `/gen-task`](.cursor/commands/gen-task.md)
+- [UI 설계서 `/gen-ui-design`](.cursor/commands/gen-ui-design.md)
+- [Frontend 개발 `/dev-fe`](.cursor/commands/dev-fe.md)
+- [Backend 개발 `/dev-be`](.cursor/commands/dev-be.md)
+- [FE–BE 연동 `/integrate`](.cursor/commands/integrate.md)
 
 ---
 

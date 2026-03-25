@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.execnt.wms.mapper.ScreenAccessLogMapper">
+
+    <select id="selectScreenAccessLogList" parameterType="map" resultType="map">
+        SELECT access_log_id,
+               userid,
+               screen_id,
+               screen_name,
+               access_type,
+               search_params,
+               result_count,
+               ip_address,
+               accessed_at
+        FROM wms.screen_access_log
+        ORDER BY accessed_at DESC, access_log_id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countScreenAccessLogList" parameterType="map" resultType="int">
+        SELECT COUNT(*)::int
+        FROM wms.screen_access_log
+    </select>
+</mapper>

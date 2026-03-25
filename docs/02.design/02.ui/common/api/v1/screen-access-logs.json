@@ -1,0 +1,31 @@
+{
+  "result_code": "I0001",
+  "result_message": "화면 접근 이력 조회",
+  "data": {
+    "list": [
+      {
+        "access_log_id": 7001,
+        "userid": "auditor01",
+        "screen_id": "SCR-PII-CUSTOMER",
+        "screen_name": "고객(개인정보) 상세",
+        "access_type": "SEARCH",
+        "result_count": 1,
+        "ip_address": "10.0.0.12",
+        "accessed_at": "2026-03-25T11:00:00"
+      },
+      {
+        "access_log_id": 7002,
+        "userid": "auditor01",
+        "screen_id": "SCR-PII-CUSTOMER",
+        "screen_name": "고객(개인정보) 상세",
+        "access_type": "DOWNLOAD",
+        "result_count": 1,
+        "ip_address": "10.0.0.12",
+        "accessed_at": "2026-03-25T11:05:00"
+      }
+    ],
+    "total": 2,
+    "page": 1,
+    "pageSize": 20
+  }
+}
