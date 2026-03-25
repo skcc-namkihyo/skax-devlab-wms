@@ -1,0 +1,132 @@
+---
+description: "DB 명명 및 설계 규칙 | Database naming and design rules"
+globs: ["backend/**/mapper/**/*.xml", "database/**/*.sql"]
+alwaysApply: false
+---
+
+# DB 명명 및 설계 규칙
+
+> [!IMPORTANT]
+> 당신은 시니어 Database 아키텍트입니다.
+> 모든 DB 객체는 이 규칙을 준수하세요.
+
+## 1. 명명 규칙
+
+**기본 원칙**: 모든 DB 객체는 소문자 snake_case
+
+### 1.1 테이블
+
+| 항목 | 규칙 | 예시 | 설명 |
+|------|------|------|------|
+| 이름 | `twms_` + `domain` | `twms_user`, `twms_order` | 테이블 prefix: `twms_` |
+| 형태 | 단수형 | `twms_user` (O), `twms_users` (X) | 단수형 사용 |
+
+**예시**:
+```
+twms_user                    # 사용자
+twms_role                    # 역할
+twms_inbound_header          # 입고 헤더
+twms_inbound_detail          # 입고 명세
+twms_outbound_header         # 출고 헤더
+twms_stock                   # 재고
+```
+
+### 1.2 컬럼
+
+| 항목 | 규칙 | 예시 |
+|------|------|------|
+| PK | `테이블명_id` | `user_id`, `order_id` |
+| FK | `참조테이블_id` | `user_id` (user 테이블 참조) |
+| 기타 | snake_case | `user_name`, `created_at`, `is_active` |
+| Boolean | `is_` prefix | `is_enabled`, `is_deleted` |
+| 날짜 | `_at` suffix | `created_at`, `updated_at` |
+
+**예시**:
+```sql
+user_id BIGINT PRIMARY KEY
+user_name VARCHAR(100)
+user_email VARCHAR(100)
+is_active BOOLEAN
+created_at TIMESTAMP
+```
+
+### 1.3 제약조건
+
+| 객체 | 규칙 | 예시 |
+|------|------|------|
+| PK | `pk_테이블` | `pk_twms_user` |
+| FK | `fk_테이블_컬럼` | `fk_twms_order_user_id` |
+| Unique | `uk_테이블_컬럼` | `uk_twms_user_email` |
+| Check | `ck_테이블_컬럼` | `ck_twms_order_status` |
+
+### 1.4 인덱스
+
+| 객체 | 규칙 | 예시 |
+|------|------|------|
+| 일반 인덱스 | `idx_테이블_컬럼` | `idx_twms_order_user_id` |
+| Unique 인덱스 | `uidx_테이블_컬럼` | `uidx_twms_user_email` |
+| 복합 인덱스 | `idx_테이블_컬럼1_컬럼2` | `idx_twms_order_user_created` |
+
+### 1.5 함수/Procedure
+
+| 객체 | 규칙 | 예시 |
+|------|------|------|
+| 함수 | `fn_[동작]_[엔티티]` | `fn_get_user_by_email`, `fn_check_stock` |
+| Procedure | `sp_[동작]_[엔티티]` | `sp_create_order`, `sp_cancel_order` |
+
+## 2. 스키마
+
+**스키마 구조**:
+```sql
+CREATE SCHEMA IF NOT EXISTS wms;
+SET search_path TO wms, public;
+SELECT * FROM wms.twms_user;
+```
+
+## 3. 공통 컬럼
+
+**모든 테이블에 필수 포함**:
+```sql
+created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+created_by VARCHAR(50) DEFAULT 'SYSTEM',
+updated_by VARCHAR(50) DEFAULT 'SYSTEM'
+```
+
+## 4. 데이터 타입
+
+| 용도 | 타입 | 예시 |
+|------|------|------|
+| PK/FK | BIGINT | `user_id BIGINT PRIMARY KEY` |
+| 문자 (짧음) | VARCHAR(N) | `VARCHAR(100)` |
+| 문자 (긴) | TEXT | 설명, 비고 |
+| 날짜 | DATE | `DATE` |
+| 시간 | TIME | `TIME` |
+| 날짜시간 | TIMESTAMP | `TIMESTAMP DEFAULT CURRENT_TIMESTAMP` |
+| Boolean | BOOLEAN | `is_enabled BOOLEAN DEFAULT true` |
+| 정수 | INTEGER, BIGINT | 수량, 합계 |
+| 소수 | NUMERIC(15,2) | 금액 |
+| JSON | JSONB | 복합 데이터 |
+
+## 5. MyBatis 매퍼 기본 구조
+
+**필수 규칙**:
+- `parameterType/resultType`: 항상 `map` 사용
+- 동적 SQL: `<if>`, `<foreach>`, `<where>`, `<set>` 활용
+- 특수문자: CDATA 섹션으로 처리
+- 스키마 명시: `wms.테이블명` 형식 사용
+
+→ 상세 SQL 패턴: `be-sql-select`, `be-sql-write`, `be-service-mapper` Skill 참조
+
+## 6. 명명 규칙 체크리스트
+
+- [ ] 테이블: `twms_` prefix + 단수형
+- [ ] PK: `테이블명_id`
+- [ ] FK: 참조 테이블 기반
+- [ ] Boolean: `is_` prefix
+- [ ] 날짜: `_at` suffix
+- [ ] 제약조건: `pk_`, `fk_`, `uk_` 접두사
+- [ ] 인덱스: `idx_`, `uidx_` 접두사
+- [ ] 함수: `fn_[동작]_[엔티티]`
+- [ ] 모든 객체: 소문자 snake_case
+- [ ] 공통 컬럼: created_at, updated_at, created_by, updated_by

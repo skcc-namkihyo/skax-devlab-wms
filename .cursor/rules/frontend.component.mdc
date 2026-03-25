@@ -1,0 +1,180 @@
+---
+description: "Vue 3 컴포넌트와 Composable 가이드 | Vue 3 components and composables guide"
+globs: ["frontend/components/**/*.js", "frontend/composables/**/*.js"]
+alwaysApply: false
+---
+
+# Vue 3 컴포넌트와 Composable 가이드
+
+> [!IMPORTANT]
+> Vue 3 Composition API 기반 컴포넌트와 Composables 개발 지침입니다.
+> 모든 컴포넌트와 Composable 작성에 이 패턴을 따르세요.
+
+## 1. 컴포넌트 시스템 개요
+
+**기본 원칙**:
+- Element Plus 컴포넌트 우선 사용
+- 재사용 가능한 범용 컴포넌트 설계
+- defineComponent + Composition API 활용
+- Props/Emits 명확한 정의
+
+## 2. defineComponent 규칙
+
+```javascript
+const { defineComponent } = Vue;
+
+export default defineComponent({
+    name: 'ComponentName',              // 필수: PascalCase
+    props: {                            // 필수: 명시적 정의
+        user: { type: Object, required: true },
+        isLoading: { type: Boolean, default: false }
+    },
+    emits: ['submit', 'cancel'],        // 필수: 사용하는 이벤트
+    template: `<!-- HTML 템플릿 -->`,   // 필수
+    setup(props, { emit }) {
+        // Composition API 로직
+        return { /* 반환값 */ };
+    }
+});
+```
+
+**필수 규칙**:
+- name: PascalCase (컴포넌트 이름 명시)
+- props: type, default 명시
+- emits: 배열로 명시적 정의
+- setup: props와 { emit, slots, attrs } 매개변수
+
+## 3. 컴포넌트 명명 규칙
+
+| 대상 | 규칙 | 예시 |
+|------|------|------|
+| 파일명 | PascalCase | `UserCard.js` |
+| 컴포넌트 name | PascalCase | `name: 'UserCard'` |
+| Props | camelCase | `isLoading`, `userName` |
+| Events | camelCase | `@submit`, `@delete` |
+| 메서드 | camelCase | `handleSubmit()`, `formatDate()` |
+
+## 4. Composable 명명 규칙
+
+**필수**: use* 접두사
+
+```javascript
+export const useApi = () => { /* ... */ };
+export const useCrud = (apiPath) => { /* ... */ };
+export const useAuth = () => { /* ... */ };
+export const useSearch = () => { /* ... */ };
+export const useTable = () => { /* ... */ };
+export const useFormValidation = () => { /* ... */ };
+```
+
+**파일명**: `use[Name].js`
+```
+composables/
+├── useApi.js
+├── useAuth.js
+├── useCrud.js
+├── useSearch.js
+└── useTable.js
+```
+
+## 5. 컴포넌트 등록 가이드
+
+**전역 등록** (app.js):
+```javascript
+import components from './components/index.js';
+for (const [name, component] of Object.entries(components)) {
+    app.component(name, component);
+}
+```
+
+**로컬 등록** (components 내부):
+```javascript
+// components/index.js
+import AppLayout from './layout/AppLayout.js';
+import PageHeader from './layout/PageHeader.js';
+
+export {
+    AppLayout,
+    PageHeader
+};
+```
+
+## 6. Composable 재사용 패턴
+
+```javascript
+// views/user/List.js
+import { useCrud } from '../../composables/useCrud.js';
+import { useSearch } from '../../composables/useSearch.js';
+
+export default {
+    setup() {
+        const { list, total, fetchList, delete: deleteItem } = useCrud('/user');
+        const { filters, clearFilters } = useSearch({ userName: '' });
+
+        return {
+            list, total, filters, clearFilters,
+            fetchList, deleteItem
+        };
+    }
+};
+```
+
+## 7. 구체적 패턴
+
+### 컴포넌트 패턴
+- 기본 컴포넌트: `fe-component` Skill 참조
+- 레이아웃 컴포넌트
+- 폼 컴포넌트
+
+### Composable 패턴
+- useApi (API 호출): `fe-composable-util` Skill 참조
+- useAuth (인증): `fe-composable-util` Skill 참조
+- useCrud (CRUD): `fe-composable-crud` Skill 참조
+- useSearch (검색): `fe-composable-crud` Skill 참조
+- useTable (테이블): `fe-composable-crud` Skill 참조
+- useFormValidation (검증): `fe-composable-util` Skill 참조
+
+### 페이지 패턴
+- List 페이지: `fe-page-crud` Skill 참조
+- Edit 페이지: `fe-page-crud` Skill 참조
+
+## 8. 코드 스타일
+
+**변수/함수**: camelCase
+```javascript
+const userName = 'John';
+const isActive = true;
+const handleClick = () => {};
+```
+
+**컴포넌트**: PascalCase
+```javascript
+name: 'UserCard'
+name: 'PageHeader'
+```
+
+**상수**: UPPER_SNAKE_CASE
+```javascript
+const MAX_PAGE_SIZE = 100;
+const DEFAULT_TIMEOUT = 5000;
+```
+
+**주석**: 한국어
+```javascript
+// 사용자 정보 로드
+const user = await fetchUser();
+```
+
+**들여쓰기**: 4 spaces
+
+## 9. 개발 체크리스트
+
+- [ ] defineComponent로 컴포넌트 정의
+- [ ] name 속성 명시 (PascalCase)
+- [ ] props type 명시
+- [ ] emits 배열로 정의
+- [ ] Composable: use* 접두사 명명
+- [ ] Props/메서드: camelCase
+- [ ] 컴포넌트 파일명: PascalCase
+- [ ] 주석: 한국어
+- [ ] 들여쓰기: 4 spaces

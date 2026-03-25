@@ -1,0 +1,136 @@
+---
+description: "SQL 패턴 가이드 | SQL pattern guide for MyBatis"
+globs: ["backend/**/mapper/**/*.xml"]
+alwaysApply: false
+---
+
+# SQL 패턴 가이드
+
+> [!IMPORTANT]
+> 모든 SQL과 MyBatis 매퍼는 이 패턴을 따르세요.
+> 성능, 보안, 가독성을 모두 고려한 표준 패턴입니다.
+
+## 1. MyBatis XML 구조 규칙
+
+**기본 선언**:
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.execnt.wms.mapper.[Domain]Mapper">
+    <!-- CRUD 쿼리 정의 -->
+</mapper>
+```
+
+**필수 규칙**:
+- `parameterType`: 항상 `map`
+- `resultType`: 항상 `map`
+- 쿼리 ID: camelCase (selectUserById, insertUser, updateUser, deleteUser)
+- 스키마 명시: `wms.테이블명` 형식
+
+## 2. 동적 SQL 조건문
+
+### 2.1 IF 조건
+
+```xml
+<if test="parameter != null and parameter != ''">
+    AND column = #{parameter}
+</if>
+
+<!-- Boolean 체크 -->
+<if test="isActive != null">
+    AND is_active = #{isActive, jdbcType=BOOLEAN}
+</if>
+
+<!-- 숫자 범위 -->
+<if test="minAmount != null and maxAmount != null">
+    AND amount BETWEEN #{minAmount} AND #{maxAmount}
+</if>
+```
+
+### 2.2 WHERE 절 (자동 AND 처리)
+
+```xml
+<where>
+    <if test="condition1 != null">
+        AND column1 = #{condition1}
+    </if>
+    <if test="condition2 != null">
+        AND column2 = #{condition2}
+    </if>
+</where>
+<!-- WHERE 자동 추가, 첫 AND 자동 제거 -->
+```
+
+### 2.3 SET 절 (자동 쉼표 처리)
+
+```xml
+<set>
+    <if test="column1 != null">column1 = #{column1},</if>
+    <if test="column2 != null">column2 = #{column2},</if>
+    updated_at = CURRENT_TIMESTAMP
+</set>
+<!-- 쉼표 자동 처리 -->
+```
+
+### 2.4 FOREACH (LIST 처리)
+
+```xml
+<!-- IN 절 -->
+<foreach collection="ids" item="id" open="(" separator="," close=")">
+    #{id}
+</foreach>
+<!-- (id1, id2, id3) -->
+
+<!-- VALUES 절 -->
+<foreach collection="items" item="item" separator=",">
+    (#{item.id}, #{item.name})
+</foreach>
+<!-- (1, 'name1'), (2, 'name2') -->
+```
+
+## 3. CDATA 사용 가이드
+
+**언제 사용**: 비교 연산자(<, >, <=, >=, &) 또는 복합 조건이 있을 때
+
+```xml
+<select id="selectOrdersByDateRange" parameterType="map" resultType="map">
+    <![CDATA[
+        SELECT * FROM wms.twms_order
+        WHERE created_at >= #{startDate} AND created_at < #{endDate}
+    ]]>
+</select>
+```
+
+**권장 규칙**: 가독성 위해 복합 WHERE 절에 CDATA 사용
+
+## 4. 쿼리 최적화 팁
+
+1. **SELECT 컬럼 명시**: `SELECT *` 대신 필요한 컬럼만
+2. **인덱스 활용**: WHERE 절 컬럼에 인덱스 설계
+3. **페이징**: 대용량 데이터는 LIMIT/OFFSET 사용
+4. **조인 순서**: 작은 테이블 먼저 조인
+5. **동적 SQL**: `<where>`, `<set>` 태그로 가독성 향상
+
+## 5. 구체적인 SQL 패턴
+
+→ SELECT 패턴: `be-sql-select` Skill 참조
+→ INSERT/UPDATE/DELETE 패턴: `be-sql-write` Skill 참조
+→ Service-Mapper 연동: `be-service-mapper` Skill 참조
+
+## 6. 트랜잭션 처리
+
+Service 계층에서 `@Transactional` 애노테이션 사용:
+- 예외 발생 시 모든 DML 자동 ROLLBACK
+- 메서드 내 다중 쿼리 실행 시 원자성 보장
+
+## 7. 개발 체크리스트
+
+- [ ] XML 문법 유효성 확인 (특수문자 이스케이프)
+- [ ] 모든 쿼리에 스키마명 명시 (wms.테이블명)
+- [ ] parameterType/resultType = "map"
+- [ ] 동적 SQL에서 <where>, <set> 태그 사용
+- [ ] 복합 조건에 CDATA 섹션 적용
+- [ ] 성능: SELECT 컬럼 명시, 인덱스 활용
+- [ ] 페이징: LIMIT/OFFSET 조합 사용

@@ -1,0 +1,274 @@
+---
+description: "WMS DB 명명 표준 (표준 단어/도메인 매핑) | WMS database naming standard with word/domain mapping"
+globs: ["database/**/*.sql", "backend/**/mapper/**/*.xml"]
+alwaysApply: false
+---
+
+# WMS DB 명명 표준
+
+> [!IMPORTANT]
+> WMS 프로젝트 데이터베이스 객체 명명의 표준입니다.
+> 모든 테이블, 컬럼, 제약조건은 이 표준을 따르세요.
+
+## 1. 표준 도메인 매핑
+
+### 1.1 WMS 주요 도메인
+
+| 도메인 | 테이블 Prefix | 설명 |
+|--------|---------------|------|
+| 입고 | twms_rcv | Receiving/Inbound (수령 및 입고) |
+| 출고 | twms_shp | Shipping/Outbound (배송 및 출고) |
+| 재고 | twms_inv | Inventory (재고 관리) |
+| 위치 | twms_loc | Location (보관 위치) |
+| 상품 | twms_prd | Product (상품 정보) |
+| 사용자 | twms_usr | User (사용자 관리) |
+| 공통코드 | twms_com | Common (공통 코드) |
+| 주문 | twms_ord | Order (주문 정보) |
+
+### 1.2 표준 약자 및 확장 명
+
+| 약자 | 확장 명 | 의미 |
+|------|--------|------|
+| rcv | receiving | 수령/입고 |
+| shp | shipping | 배송/출고 |
+| inv | inventory | 재고 |
+| loc | location | 위치/보관지 |
+| prd | product | 상품 |
+| usr | user | 사용자 |
+| com | common | 공통 |
+| ord | order | 주문 |
+| hdr | header | 헤더 (마스터) |
+| dtl | detail | 상세 (라인) |
+| seq | sequence | 순서번호 |
+| qty | quantity | 수량 |
+| amt | amount | 금액 |
+| dt | date | 날짜 |
+| yn | yes/no | 여부 (Y/N) |
+
+## 2. 표준 데이터 타입
+
+### 2.1 공통 컬럼 타입 정의
+
+| 컬럼 용도 | 표준 타입 | 예시 | 설명 |
+|----------|----------|------|------|
+| 코드 | VARCHAR(20) | `prd_type_code` | 고정 길이 코드 |
+| 이름 | VARCHAR(100) | `prd_name` | 일반 이름 |
+| 설명 | TEXT | `prd_description` | 긴 설명 |
+| 수량 | INTEGER | `rcv_qty` | 정수 수량 |
+| 금액 | NUMERIC(15,2) | `shp_total_amt` | 금액 (15자리, 소수 2자리) |
+| 비율 | NUMERIC(5,2) | `disc_rate` | 비율 (5자리, 소수 2자리) |
+| 여부 | CHAR(1) | `is_active_yn` | Y/N 형식 |
+| 날짜 | DATE | `rcv_dt` | 날짜만 |
+| 날짜시간 | TIMESTAMP | `rcv_at` | 날짜시간 |
+
+**사용 규칙**:
+- 코드 필드: `[domain]_[name]_code` VARCHAR(20)
+- 이름/명칭: `[domain]_[name]_name` VARCHAR(100)
+- 수량: `[domain]_[name]_qty` INTEGER
+- 금액: `[domain]_[name]_amt` NUMERIC(15,2)
+- 여부: `[name]_yn` CHAR(1) - 값: 'Y' 또는 'N'
+- 날짜: `[name]_dt` DATE
+- 타임스탬프: `[name]_at` TIMESTAMP
+
+## 3. 테이블 명명 패턴
+
+### 3.1 기본 패턴
+
+```
+twms_[domain]_[entity]_[type]
+```
+
+- domain: rcv, shp, inv, loc, prd, usr, com, ord
+- entity: 엔티티명 (user, product, order 등)
+- type (optional): hdr (헤더/마스터), dtl (상세/라인)
+
+### 3.2 예시
+
+**입고 관련**:
+```
+twms_rcv_header          # 입고 헤더
+twms_rcv_detail          # 입고 상세
+twms_rcv_item            # 입고 항목
+```
+
+**출고 관련**:
+```
+twms_shp_order           # 배송 주문
+twms_shp_order_line      # 배송 주문 라인
+twms_shp_box             # 배송 상자
+```
+
+**재고 관련**:
+```
+twms_inv_stock           # 재고
+twms_inv_movement        # 재고 이동 로그
+twms_inv_location        # 재고 위치
+```
+
+**공통 마스터**:
+```
+twms_com_code            # 공통 코드
+twms_com_code_detail     # 공통 코드 상세
+```
+
+## 4. 컬럼 명명 패턴
+
+### 4.1 Primary Key
+
+```sql
+[테이블명]_id BIGINT PRIMARY KEY
+-- 예: rcv_header_id, shp_order_id, inv_stock_id
+```
+
+### 4.2 Foreign Key
+
+```sql
+[참조테이블명]_id BIGINT
+-- 예: prd_id (상품 테이블 참조)
+--    usr_id (사용자 테이블 참조)
+```
+
+### 4.3 비즈니스 컬럼
+
+**명명 규칙**: `[도메인]_[엔티티]_[속성]`
+
+```sql
+-- 입고 테이블
+rcv_qty INTEGER              -- 입고 수량
+rcv_dt DATE                  -- 입고 날짜
+rcv_amt NUMERIC(15,2)        -- 입고 금액
+rcv_status_code VARCHAR(20)  -- 입고 상태 코드
+
+-- 재고 테이블
+inv_qty INTEGER              -- 재고 수량
+inv_reserved_qty INTEGER     -- 예약 수량
+inv_available_qty INTEGER    -- 사용 가능 수량 (computed)
+```
+
+### 4.4 공통 컬럼 (모든 테이블 필수)
+
+```sql
+created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+created_by VARCHAR(50) DEFAULT 'SYSTEM'
+updated_by VARCHAR(50) DEFAULT 'SYSTEM'
+```
+
+## 5. 제약조건 명명
+
+| 제약조건 | 규칙 | 예시 |
+|----------|------|------|
+| PK | `pk_twms_[table]` | `pk_twms_rcv_header` |
+| FK | `fk_twms_[table]_[column]` | `fk_twms_rcv_header_prd_id` |
+| Unique | `uk_twms_[table]_[column]` | `uk_twms_usr_email` |
+| Check | `ck_twms_[table]_[column]` | `ck_twms_rcv_status` |
+
+**예시**:
+```sql
+CONSTRAINT pk_twms_rcv_header PRIMARY KEY (rcv_header_id)
+CONSTRAINT fk_twms_rcv_header_prd_id FOREIGN KEY (prd_id) REFERENCES twms_prd(prd_id)
+CONSTRAINT uk_twms_usr_email UNIQUE (usr_email)
+CONSTRAINT ck_twms_rcv_status CHECK (rcv_status_code IN ('DRAFT', 'COMPLETE', 'CANCELLED'))
+```
+
+## 6. 인덱스 명명
+
+| 인덱스 | 규칙 | 예시 |
+|--------|------|------|
+| 단일 | `idx_twms_[table]_[column]` | `idx_twms_rcv_header_prd_id` |
+| 복합 | `idx_twms_[table]_[col1]_[col2]` | `idx_twms_rcv_header_prd_dt` |
+| Unique | `uidx_twms_[table]_[column]` | `uidx_twms_usr_email` |
+
+**예시**:
+```sql
+CREATE INDEX idx_twms_rcv_header_prd_id ON twms_rcv_header(prd_id);
+CREATE INDEX idx_twms_rcv_header_rcv_dt ON twms_rcv_header(rcv_dt DESC);
+CREATE UNIQUE INDEX uidx_twms_usr_email ON twms_usr(usr_email);
+```
+
+## 7. MyBatis 매퍼 XML 명명
+
+**파일 경로**: `backend/src/main/resources/mappers/[domain]/[Domain]Mapper.xml`
+
+**네임스페이스**: `com.execnt.wms.mapper.[Domain]Mapper`
+
+**쿼리 ID 규칙**:
+```xml
+<!-- SELECT -->
+<select id="selectRcvHeaderById" ... />
+<select id="selectRcvHeaders" ... />
+
+<!-- INSERT -->
+<insert id="insertRcvHeader" ... />
+<insert id="insertRcvDetailBatch" ... />
+
+<!-- UPDATE -->
+<update id="updateRcvHeader" ... />
+<update id="updateRcvStatus" ... />
+
+<!-- DELETE -->
+<delete id="deleteRcvHeader" ... />
+```
+
+**패턴**: `[select|insert|update|delete][Entity][Action]`
+
+## 8. WMS 표준 테이블 구조 예시
+
+### 8.1 입고 마스터-상세 구조
+
+```sql
+CREATE TABLE twms_rcv_header (
+    rcv_header_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    prd_id BIGINT NOT NULL,
+    rcv_qty INTEGER NOT NULL,
+    rcv_amt NUMERIC(15,2),
+    rcv_dt DATE NOT NULL,
+    rcv_status_code VARCHAR(20) DEFAULT 'DRAFT',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(50) DEFAULT 'SYSTEM',
+    updated_by VARCHAR(50) DEFAULT 'SYSTEM',
+    CONSTRAINT fk_twms_rcv_header_prd_id FOREIGN KEY (prd_id) REFERENCES twms_prd(prd_id),
+    CONSTRAINT ck_twms_rcv_status CHECK (rcv_status_code IN ('DRAFT', 'COMPLETE', 'CANCELLED'))
+);
+
+CREATE INDEX idx_twms_rcv_header_prd_id ON twms_rcv_header(prd_id);
+CREATE INDEX idx_twms_rcv_header_rcv_dt ON twms_rcv_header(rcv_dt DESC);
+```
+
+### 8.2 재고 테이블
+
+```sql
+CREATE TABLE twms_inv_stock (
+    inv_stock_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    prd_id BIGINT NOT NULL,
+    loc_id BIGINT NOT NULL,
+    inv_qty INTEGER NOT NULL DEFAULT 0,
+    inv_reserved_qty INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_twms_inv_stock_prd_loc UNIQUE (prd_id, loc_id),
+    CONSTRAINT fk_twms_inv_stock_prd_id FOREIGN KEY (prd_id) REFERENCES twms_prd(prd_id),
+    CONSTRAINT fk_twms_inv_stock_loc_id FOREIGN KEY (loc_id) REFERENCES twms_loc(loc_id)
+);
+
+CREATE INDEX idx_twms_inv_stock_prd_id ON twms_inv_stock(prd_id);
+CREATE INDEX idx_twms_inv_stock_loc_id ON twms_inv_stock(loc_id);
+```
+
+## 9. 명명 표준 체크리스트
+
+- [ ] 테이블명: `twms_[도메인]_[엔티티]` 형식
+- [ ] PK: `[테이블명]_id`
+- [ ] FK: `[참조테이블]_id` (자동 snake_case 변환)
+- [ ] 코드: `[name]_code` VARCHAR(20)
+- [ ] 이름: `[name]_name` VARCHAR(100)
+- [ ] 수량: `[name]_qty` INTEGER
+- [ ] 금액: `[name]_amt` NUMERIC(15,2)
+- [ ] 여부: `[name]_yn` CHAR(1) (Y/N)
+- [ ] 날짜: `[name]_dt` DATE
+- [ ] 타임스탬프: `[name]_at` TIMESTAMP
+- [ ] 제약조건: `pk_`, `fk_`, `uk_`, `ck_` 접두사
+- [ ] 인덱스: `idx_`, `uidx_` 접두사
+- [ ] 공통 컬럼: created_at, updated_at, created_by, updated_by
+- [ ] 모든 객체: 소문자 snake_case

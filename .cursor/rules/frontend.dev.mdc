@@ -1,0 +1,288 @@
+---
+description: "Vue 3 CDN Frontend 개발 가이드 | Vue 3 CDN frontend development guide"
+globs: ["frontend/**/*.js", "frontend/**/*.html"]
+alwaysApply: false
+---
+
+# Frontend 개발 지침
+
+> [!IMPORTANT]
+> 당신은 Vue 3 CDN, Element Plus 전문가입니다.
+> 모든 프론트엔드 개발에 이 지침을 적용하세요.
+
+## 1. 아키텍처 및 기술 스택
+
+**핵심 아키텍처**:
+- **방식**: Vue 3 SPA (Single Page Application), NO Build Process
+- **실행**: VSCode Live Server (port 5500) 또는 `python -m http.server 8000`
+- **모듈 시스템**: `<script type="module">` → 로컬 파일 import/export 가능, CDN 라이브러리는 전역 변수 사용
+
+**기술 스택**:
+- Vue: v3.5.18 (CDN, `window.Vue`)
+- Vue Router: v4.5.1 (CDN, `window.VueRouter`, hash history)
+- Element Plus: v2.11.4 (CDN, `window.ElementPlus`)
+- Tailwind CSS: v3.4.17 (CDN)
+- Axios: v1.11.0 (CDN, `window.axios`)
+- Icons: @element-plus/icons-vue (CDN)
+
+**금지 대상**:
+- jQuery, TypeScript, Pinia, Vite, npm 빌드, fetch API
+- CDN 라이브러리를 npm 패키지처럼 import: `import { ref } from 'vue'` ❌
+- CDN 라이브러리는 전역 변수로만 접근: `const { ref } = Vue;` ✅
+
+## 2. 디렉토리 구조
+
+```
+frontend/
+├── index.html              # 메인 HTML (모든 CDN 라이브러리, type="module" 진입점)
+├── app.js                  # Vue 앱 초기화
+├── router.js               # Vue Router 설정 (모든 라우트 중앙 관리)
+├── store.js                # 전역 상태 (reactive API)
+├── api.js                  # Axios 설정
+├── sidebar.js              # 사이드바 메뉴 구성 (신규 모듈 메뉴 여기에 등록)
+├── components/             # 공통 컴포넌트
+│   └── layout/
+│       └── AppLayout.js    # 메인 레이아웃
+├── views/                  # 페이지 컴포넌트
+│   ├── Home.js
+│   ├── auth/
+│   │   └── Login.js
+│   └── {module}/           # 모듈별 디렉토리
+│       ├── pages/          # 페이지 컴포넌트 (.js)
+│       │   ├── List.js
+│       │   ├── Create.js
+│       │   └── Edit.js
+│       └── components/     # 모듈 전용 재사용 컴포넌트
+│           ├── {Module}Form.js
+│           ├── {Module}Table.js
+│           └── {Module}Dialog.js
+├── composables/            # Vue 3 Composables
+├── utils/                  # 유틸리티
+├── styles/                 # CSS
+└── assets/                 # 이미지, 아이콘
+```
+
+**페이지 파일 규칙**:
+- 확장자: `.js` (Vue 컴포넌트 파일)
+- 페이지 위치: `views/{module}/pages/List.js`, `Create.js`, `Edit.js`
+- 모듈 컴포넌트: `views/{module}/components/{Module}Form.js`
+
+## 3. 핵심 파일 규칙
+
+### 3.1 index.html
+
+- 모든 CDN 라이브러리 선언 (로딩 순서 필수 준수)
+- **CDN 로딩 순서**: Vue → VueRouter → Element Plus CSS → Element Plus JS → 로케일 → Icons → Tailwind → Axios
+- Element Plus 한글 로케일 설정: `locale/ko.js`
+- 앱 진입점: `<script type="module" src="./app.js">`
+
+### 3.2 app.js (Vue 초기화)
+
+- `createApp`으로 Vue 앱 생성
+- `ElementPlus`, `router` 플러그인 등록
+- `createApp()` 호출 후 전역 에러 핸들러 설정
+
+→ 상세 코드: `fe-scaffold` Skill 참조
+
+### 3.3 router.js (라우팅)
+
+- `createWebHashHistory` (hash 모드)
+- 동적 import로 페이지 컴포넌트 로드: `() => import('./views/{module}/pages/List.js')`
+- **모든 모듈 라우트는 이 파일에 중앙 등록** (분산 금지)
+- 공개 경로에 `meta: { public: true }` 지정 (현재 `/login`만 해당)
+- **라우트 가드 규칙**:
+  - token 없음 + 비공개 페이지 → `/login` 리다이렉트
+  - token 있음 + `/login` 접근 → `/` 홈으로 리다이렉트 (이중 로그인 방지)
+  - `http://localhost:3000` 최초 진입 시 token이 없으면 즉시 로그인 페이지로 이동
+
+### 3.4 api.js (Axios 설정)
+
+- `baseURL: 'http://localhost:8080/api'`
+- 요청 인터셉터: `localStorage.getItem('token')` → `Authorization: Bearer` 헤더 추가
+- 응답 인터셉터: **401 또는 403** 수신 시 → `token`, `refreshToken` 삭제 후 `/#/login` 이동
+- 응답 정상 시 `response.data` 반환 (Axios 래핑 해제)
+
+> ⚠️ Spring Security는 인증 미설정 시 403을 반환하므로, **401과 403을 모두 처리**해야 합니다.
+
+### 3.5 store.js (전역 상태)
+
+- `reactive` API 사용 (Pinia 대신)
+- `user`, `token`, `isLoading` 상태 관리
+- `localStorage` 연동: `token`(accessToken), `refreshToken` 별도 저장/삭제
+
+### 3.6 sidebar.js (메뉴 구성)
+
+- 사이드바 메뉴 항목 정의 (라벨, 경로, 아이콘)
+- **신규 모듈 추가 시 반드시 이 파일에 메뉴 등록**
+- `AppLayout.js`에서 import하여 사용
+
+## 4. CDN 라이브러리 접근 방식
+
+**전역 변수 사용** (CDN 환경 표준):
+```javascript
+// Vue 3 API (전역 변수)
+const { defineComponent, ref, reactive, computed, onMounted } = Vue;
+
+// Vue Router (전역 변수)
+const { useRouter, useRoute } = VueRouter;
+
+// Element Plus 메시지/다이얼로그
+ElMessage.success('저장되었습니다.');
+ElMessageBox.confirm('삭제하시겠습니까?', '확인');
+```
+
+**로컬 파일 import** (`type="module"` 환경, 허용):
+```javascript
+// ✅ 로컬 Composable import (허용)
+import { useCrud } from '../../composables/useCrud.js';
+import { useSearch } from '../../composables/useSearch.js';
+
+// ❌ CDN 패키지 직접 import (금지)
+import { ref } from 'vue';                    // 금지
+import { ElMessage } from 'element-plus';      // 금지
+import { useRouter } from 'vue-router';        // 금지 → const { useRouter } = VueRouter; 사용
+```
+
+## 5. 컴포넌트 규칙
+
+**defineComponent 사용**:
+```javascript
+const { defineComponent } = Vue;  // CDN 전역 변수
+
+export default defineComponent({
+    name: 'ComponentName',
+    props: { /* 필수: 명시적 정의 */ },
+    emits: ['submit', 'cancel'],
+    template: `<!-- HTML 템플릿 -->`,
+    setup(props, { emit }) {
+        // Composition API
+        return { /* 반환값 */ };
+    }
+});
+```
+
+→ 상세 패턴: `fe-component` Skill 참조
+
+## 6. Composables 규칙
+
+**명명**: `use*` 접두사 필수 (useApi, useCrud, useAuth, useSearch 등)
+
+Composables는 로직 재사용을 위한 함수:
+- `useApi`: API 호출 및 에러 처리
+- `useCrud`: 목록/생성/수정/삭제 통합
+- `useAuth`: 인증 상태 관리
+- `useSearch`: 검색 필터 관리
+
+→ 상세 패턴: `fe-composable-util`, `fe-composable-crud` Skill 참조
+
+## 7. 라이브러리 안전성
+
+**CDN 라이브러리 로드 확인** (app.js 시작 전):
+```javascript
+if (!window.Vue) throw new Error('Vue 라이브러리 로드 실패');
+if (!window.ElementPlus) throw new Error('Element Plus 라이브러리 로드 실패');
+if (!window.axios) throw new Error('Axios 라이브러리 로드 실패');
+```
+
+## 8. 코드 스타일
+
+| 항목 | 규칙 | 예시 |
+|------|------|------|
+| 변수/함수 | camelCase | `userName`, `handleClick()` |
+| 컴포넌트 | PascalCase | `UserCard`, `PageHeader` |
+| 상수 | UPPER_SNAKE_CASE | `MAX_PAGE_SIZE` |
+| 주석 | 한국어 | `// 사용자 정보 로드` |
+| 들여쓰기 | 4 spaces | - |
+
+## 9. 페이지 패턴
+
+### List 페이지 (`views/{module}/pages/List.js`)
+- 검색 폼 + 데이터 테이블 + 페이징
+- `useCrud` + `useSearch` 조합
+
+### Create 페이지 (`views/{module}/pages/Create.js`)
+- 신규 데이터 입력 폼
+- 유효성 검사 후 저장 → 목록 페이지로 이동
+
+### Edit 페이지 (`views/{module}/pages/Edit.js`)
+- route params의 `id` 확인 후 기존 데이터 로드
+- `isEdit` 플래그로 생성/수정 구분 (Create와 통합 시)
+
+→ 상세 패턴: `fe-page-crud` Skill 참조
+
+## 10. 인증 흐름
+
+### 10.1 FE ↔ BE 인증 필드 매핑
+
+| 항목 | FE 필드명 | BE 필드명 | 설명 |
+|------|-----------|-----------|------|
+| 로그인 요청 | `userid`, `password` | `userid`, `password` | BE `adm_userinfo.userid` 기준 |
+| AccessToken | `accessToken` | `accessToken` | `localStorage('token')`에 저장 |
+| RefreshToken | `refreshToken` | `refreshToken` | `localStorage('refreshToken')`에 별도 저장 |
+| 사용자 정보 | `{ userid, username, usergroupcode }` | 동일 | `store.user`에 객체로 저장 |
+
+### 10.2 인증 전체 흐름
+
+```
+http://localhost:3000 접속 → Vue Router 초기화 → beforeEach 가드
+  ├─ token 없음 + 비공개 페이지(/) → /login 리다이렉트
+  │    └─ Login.js → useAuth.login(userid, password)
+  │         └─ POST /api/auth/login → accessToken + refreshToken 발급
+  │              └─ store에 token/user 저장 → / 홈으로 이동
+  ├─ token 있음 + /login 접근 → / 홈으로 리다이렉트 (이중 로그인 방지)
+  └─ token 있음 + 비공개 페이지
+       └─ api.js 인터셉터가 Bearer 토큰 첨부
+            ├─ 정상 응답 → 화면 렌더링
+            └─ 401/403 응답 → token 삭제 → /login 리다이렉트
+```
+
+### 10.4 라우트 meta 규칙
+
+- 공개 경로: `meta: { public: true }` 명시 (예: `/login`)
+- 비공개 경로: `meta` 생략 (기본값 = 인증 필요)
+- 신규 공개 페이지 추가 시 반드시 `meta: { public: true }` 지정
+
+### 10.3 AppLayout 로그인 분기
+
+- `AppLayout.js`에서 현재 경로가 `/login`이면 **헤더/사이드바 없이** `<router-view>`만 렌더링
+- 로그인 이외 경로에서는 헤더(사용자명 표시, 로그아웃) + 사이드바 + 콘텐츠 영역 렌더링
+- 로그아웃은 `useAuth().logout()` 사용 (localStorage 직접 조작 금지)
+
+## 11. 에러 처리 및 품질 기준
+
+**모든 API 호출 필수 적용**:
+```javascript
+const loading = ref(false);
+try {
+    loading.value = true;
+    const result = await api.get('/endpoint');
+} catch (error) {
+    ElMessage.error('데이터 조회 실패: ' + (error.message || '알 수 없는 오류'));
+} finally {
+    loading.value = false;
+}
+```
+
+- 로딩 상태: `v-loading` 디렉티브 또는 `loading` ref로 UI 반영 필수
+- 에러 메시지: 사용자 친화적 한국어
+
+## 12. 개발 체크리스트
+
+- [ ] index.html: CDN 로딩 순서 준수 (Vue → VueRouter → ElementPlus → Axios)
+- [ ] Vue 3: `const { defineComponent } = Vue;` 전역 변수 사용
+- [ ] CDN 라이브러리: `VueRouter`, `ElementPlus` 전역 접근 (npm import 금지)
+- [ ] 로컬 파일: `import { useCrud } from '...'` (type="module" 내 로컬 import OK)
+- [ ] 라우팅: `createWebHashHistory` 사용, 모든 라우트 `router.js` 중앙 등록
+- [ ] 신규 모듈 메뉴: `sidebar.js`에 등록
+- [ ] 페이지 위치: `views/{module}/pages/List.js` 구조 준수
+- [ ] API: Axios 사용, fetch API 금지
+- [ ] 상태: `reactive` API로 전역 상태 관리
+- [ ] Composables: `use*` 접두사 명명
+- [ ] 에러 처리: 모든 API 호출에 try-catch 적용
+- [ ] 로딩 상태: UI에 반드시 반영
+- [ ] 코드: camelCase 변수, PascalCase 컴포넌트
+- [ ] 주석: 한국어
+- [ ] 인증: api.js에서 **401 + 403** 모두 처리
+- [ ] 인증: useAuth로 로그인/로그아웃 (localStorage 직접 조작 금지)
+- [ ] 인증: AppLayout에서 /login 경로일 때 레이아웃 숨김
+- [ ] 인증: 로그인 요청 필드명 BE와 일치 (userid, password)

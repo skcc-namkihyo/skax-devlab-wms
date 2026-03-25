@@ -1,0 +1,34 @@
+{
+  "hooks": [
+    {
+      "event": "afterFileEdit",
+      "match": "backend/**/*.java",
+      "command": ".cursor/hooks/check-java-style.sh",
+      "description": "Java 코드 스타일 검증 (사후 감사)"
+    },
+    {
+      "event": "afterFileEdit",
+      "match": "backend/**/mapper/**/*.xml",
+      "command": ".cursor/hooks/check-sql-escape.sh",
+      "description": "SQL XML 이스케이프 검증 (사후 감사)"
+    },
+    {
+      "event": "afterFileEdit",
+      "match": "frontend/**/*.js",
+      "command": ".cursor/hooks/check-vue-globals.sh",
+      "description": "Vue CDN 전역 변수 검증 (사후 감사)"
+    },
+    {
+      "event": "beforeShellExecution",
+      "match": "*.sql",
+      "command": ".cursor/hooks/check-dangerous-sql.sh",
+      "description": "위험 SQL (DROP/TRUNCATE) 차단"
+    },
+    {
+      "event": "preToolUse",
+      "match": "**",
+      "command": ".cursor/hooks/check-file-boundary.sh",
+      "description": "프로젝트 외부 파일 수정 차단"
+    }
+  ]
+}

@@ -1,0 +1,148 @@
+---
+description: "Spring Boot 3.5.4 Backend 개발 가이드 | Spring Boot 3.5.4 backend development guide"
+globs: ["backend/**/*.java"]
+alwaysApply: false
+---
+
+# Backend 개발 지침
+
+> [!IMPORTANT]
+> 당신은 Spring Boot 3.5.4, Java 17, MyBatis 전문가입니다.
+> 이 지침을 백엔드 모든 개발에 적용하세요.
+
+## 1. 아키텍처
+
+- **프레임워크**: Spring Boot 3.5.4
+- **Java 버전**: Java 17
+- **데이터 접근**: MyBatis 3.x
+- **보안**: Spring Security (JWT 기반)
+- **빌드**: Gradle 8.x
+
+## 2. 패키지 구조
+
+```
+backend/src/main/java/com/execnt/
+├── WmsApplication.java       # 메인 클래스
+├── adm/                       # 관리 모듈
+│   ├── ctr/                   # 컨트롤러
+│   ├── dao/                   # DAO
+├── session/                   # 세션 관리 (JWT 토큰)
+├── wms/                       # 창고 관리
+│   ├── controller/            # 컨트롤러
+│   ├── service/               # 비즈니스 로직
+│   └── mapper/                # MyBatis Mapper
+├── common/                    # 공통 모듈
+│   ├── exception/             # 예외 처리
+│   ├── utils/                 # 유틸리티
+│   └── constants/             # 상수
+```
+
+## 3. 데이터 처리
+
+**필수 규칙**: 모든 계층에서 `Map<String, Object>` 사용. DTO/VO 절대 금지.
+
+- **입력**: `@RequestBody Map<String, Object>`
+- **출력**: `@ResponseBody Map<String, Object>`
+- **MyBatis**: `resultType="map"`, `parameterType="map"`
+
+**Map 키 명명**: MyBatis의 `mapUnderscoreToCamelCase(true)` 설정으로 DB `snake_case` 자동 변환
+- 예: `user_id` → `userId`, `user_name` → `userName`
+
+Map 값 추출 시 camelCase를 먼저 확인한 후 snake_case 대안 확인 → 상세 패턴: `be-map-util` Skill 참조
+
+## 4. 예외 처리
+
+**GlobalExceptionHandler 방식**:
+- 모든 메서드: `throws Exception` 필수
+- 비즈니스 예외: `BizException("E1001")` (예: 이미 등록된 이메일)
+- 시스템 예외: `Exception` (500 에러)
+- 메시지: `messages.properties` 에서 코드 조회
+
+**메시지 코드 형식**: `(E|I|W) + 4자리`
+- E1001: 이미 등록된 이메일입니다.
+- E1004: 이메일 또는 비밀번호가 올바르지 않습니다.
+- I0001: 정상적으로 처리되었습니다.
+
+## 5. 네이밍 규칙
+
+| 대상 | 규칙 | 예시 |
+|------|------|------|
+| 패키지 | lowercase | `com.execnt.wms.controller` |
+| 클래스 | PascalCase | `UserController`, `UserService` |
+| 컨트롤러 | [Domain]Controller | `UserController` |
+| 서비스 | [Domain]Service | `UserService` |
+| Mapper | [Domain]Mapper | `UserMapper` |
+| 메서드/변수 | camelCase | `createUser()`, `userName` |
+| 상수 | UPPER_SNAKE_CASE | `MAX_RETRY_COUNT` |
+
+## 6. 코드 스타일
+
+**들여쓰기**: 4 spaces (탭 금지)
+
+**파일 구조**:
+```java
+package com.execnt.[package];
+
+// Spring imports
+import org.springframework...;
+// Swagger imports
+import io.swagger.v3.oas.annotations...;
+// Java imports
+import java.util...;
+// 내부 imports
+import com.execnt...;
+
+/**
+ * [클래스 설명]
+ */
+@SpringAnnotation
+@SwaggerAnnotation
+public class ClassName {
+    private final Type fieldName;
+
+    public ClassName(Dependencies) {
+        this.fieldName = fieldName;
+    }
+
+    /**
+     * [메서드 설명]
+     * @param name 설명
+     * @return 반환값 설명
+     */
+    @PostMapping("/path")
+    public Map<String, Object> methodName(
+        @RequestBody Map<String, Object> params) throws Exception {
+        // 구현
+    }
+}
+```
+
+**JavaDoc 필수**: 모든 public 클래스/메서드 필수, @param/@return/@throws 필수
+
+## 7. API 응답 형식
+
+ResponseUtil을 사용한 표준 응답:
+```json
+{
+  "result_code": "I0001",
+  "result_message": "정상적으로 처리되었습니다.",
+  "data": { ... }
+}
+```
+
+→ 상세 패턴: `be-controller` Skill 참조
+
+## 8. MyBatis 매퍼
+
+- SQL 파일: `src/main/resources/mappers/[domain]/[Domain]Mapper.xml`
+- 동적 SQL: `<if>`, `<foreach>` 활용
+- 특수문자: CDATA 섹션 사용
+- include 태그: 2개 이상 쿼리에서만 사용
+
+→ 상세 패턴 구현: `be-sql-select`, `be-sql-write`, `be-service-mapper` Skill 참조
+
+## 9. 테스트
+
+- **JUnit 5** 사용
+- 테스트 클래스명: `[TargetClass]Test`
+- Service/Mapper 계층 테스트 필수

@@ -1,0 +1,192 @@
+---
+description: "PostgreSQL 개발 지침 | PostgreSQL 12+ development guide"
+globs: ["database/**/*.sql"]
+alwaysApply: false
+---
+
+# PostgreSQL 개발 지침
+
+> [!IMPORTANT]
+> PostgreSQL 12+ 기반 모든 DB 개발에 이 지침을 적용하세요.
+> Neon DB (PostgreSQL 호스팅) 특화 사항도 포함됩니다.
+
+## 1. 스키마 기본 구조
+
+```sql
+CREATE SCHEMA IF NOT EXISTS wms;
+SET search_path TO wms, public;
+SELECT * FROM wms.twms_user;
+```
+
+## 2. 데이터 타입 규칙
+
+### 2.1 VARCHAR vs TEXT
+
+- **VARCHAR(N)**: 고정 길이 제약이 필요한 경우 (이메일: 100, 이름: 100)
+- **TEXT**: 길이 제약이 없는 설명/비고 필드
+
+**권장**:
+```sql
+user_name VARCHAR(100)        -- 이름
+user_email VARCHAR(100)       -- 이메일
+description TEXT              -- 설명
+remarks TEXT                  -- 비고
+```
+
+### 2.2 숫자 정밀도
+
+- **금액**: `NUMERIC(15, 2)` - 총 15자리, 소수 2자리
+- **수량**: `INTEGER` 또는 `BIGINT`
+- **비율**: `NUMERIC(5, 2)` - 100.00% 형식
+
+**예시**:
+```sql
+price NUMERIC(15, 2)          -- 상품 가격
+discount_rate NUMERIC(5, 2)   -- 할인율
+quantity INTEGER              -- 수량
+```
+
+### 2.3 Boolean 처리 (MyBatis 반환값 다양)
+
+PostgreSQL BOOLEAN는 Java에서 Boolean, String, Number로 반환될 수 있음.
+
+**테이블 정의**:
+```sql
+is_active BOOLEAN NOT NULL DEFAULT true
+is_deleted BOOLEAN NOT NULL DEFAULT false
+```
+
+**Java 추출 규칙** (필수):
+```java
+private Boolean extractBoolean(Map<String, Object> map, String key) {
+    Object value = map.get(key);
+    if (value == null) return null;
+    if (value instanceof Boolean) return (Boolean) value;
+    if (value instanceof String) {
+        String s = ((String) value).trim().toLowerCase();
+        return "true".equals(s) || "t".equals(s) || "1".equals(s);
+    }
+    if (value instanceof Number) return ((Number) value).intValue() != 0;
+    return null;
+}
+```
+
+### 2.4 자동 증가 ID (IDENTITY)
+
+**권장 방식** (PostgreSQL 10+):
+```sql
+CREATE TABLE wms.twms_user (
+    user_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_name VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+## 3. 테이블 설계 원칙
+
+**기본 테이블 구조**:
+```sql
+CREATE TABLE IF NOT EXISTS wms.twms_[domain] (
+    [domain]_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    -- 비즈니스 컬럼
+    column1 VARCHAR(100) NOT NULL,
+    column2 NUMERIC(15, 2),
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    -- 공통 컬럼
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(50) DEFAULT 'SYSTEM',
+    updated_by VARCHAR(50) DEFAULT 'SYSTEM'
+);
+```
+
+**외래키 관계**:
+```sql
+CONSTRAINT fk_twms_order_user_id
+    FOREIGN KEY (user_id)
+    REFERENCES wms.twms_user(user_id)
+    ON DELETE CASCADE
+```
+
+## 4. 인덱스 전략
+
+```sql
+-- 단일 컬럼 인덱스 (조회 빈도 높은 컬럼)
+CREATE INDEX idx_twms_user_email ON wms.twms_user(user_email);
+
+-- 복합 인덱스 (자주 함께 조회되는 컬럼)
+CREATE INDEX idx_twms_order_user_date ON wms.twms_order(user_id, order_date DESC);
+
+-- Unique 인덱스 (고유성 보장)
+CREATE UNIQUE INDEX uidx_twms_user_email ON wms.twms_user(user_email);
+
+-- 부분 인덱스 (특정 조건만 인덱싱)
+CREATE INDEX idx_twms_user_active ON wms.twms_user(user_id) WHERE is_active = true;
+```
+
+## 5. Neon DB 연결 설정
+
+### 5.1 Spring Boot application.yml
+
+```yml
+spring:
+  datasource:
+    url: jdbc:postgresql://[host]:[port]/[database]?sslmode=require
+    username: [username]
+    password: [password]
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+```
+
+### 5.2 Neon 풀러 (Pooler) URL 권장
+
+- **Direct**: 직접 연결 (소수 연결)
+- **Pooler**: 커넥션 풀 사용 (다수 연결, 권장)
+
+## 6. 쿼리 성능 모니터링
+
+```sql
+-- 슬로우 쿼리 확인 (1초 이상)
+SELECT * FROM pg_stat_statements
+WHERE mean_exec_time > 1000
+ORDER BY mean_exec_time DESC;
+
+-- 테이블 크기 확인
+SELECT
+    schemaname,
+    tablename,
+    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size
+FROM pg_tables
+WHERE schemaname = 'wms'
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
+```
+
+## 7. 마이그레이션 패턴
+
+```sql
+-- 테이블 스키마 변경
+ALTER TABLE wms.twms_user ADD COLUMN phone VARCHAR(20);
+ALTER TABLE wms.twms_user DROP COLUMN legacy_field;
+ALTER TABLE wms.twms_user ALTER COLUMN is_active SET DEFAULT false;
+
+-- 제약조건 변경
+ALTER TABLE wms.twms_user ADD CONSTRAINT uk_twms_user_email UNIQUE (user_email);
+ALTER TABLE wms.twms_user DROP CONSTRAINT uk_twms_user_email;
+```
+
+→ 고급 기능 (Window함수, CTE, 권한설정): `db-advanced-sql` Skill 참조
+→ 테이블 생성: `db-ddl` Skill 참조
+
+## 8. 개발 체크리스트
+
+- [ ] VARCHAR vs TEXT 올바른 선택
+- [ ] NUMERIC 정밀도 설정 (금액: 15,2)
+- [ ] Boolean 필드에 DEFAULT 설정
+- [ ] 모든 테이블에 공통 컬럼 포함
+- [ ] PK/FK 제약조건 정의
+- [ ] 인덱스: 조회 컬럼에 설계
+- [ ] IDENTITY로 자동 증가 ID 설정
+- [ ] Neon 풀러 URL 사용 (성능)

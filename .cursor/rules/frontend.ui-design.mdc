@@ -1,0 +1,231 @@
+---
+description: "UI/UX 디자인 시스템 | Element Plus and Tailwind CSS design system"
+globs: ["frontend/**/*.js", "frontend/**/*.css", "frontend/**/*.html"]
+alwaysApply: false
+---
+
+# UI/UX 디자인 시스템
+
+> [!IMPORTANT]
+> Element Plus + Tailwind CSS 기반 UI/UX 표준입니다.
+> 모든 프론트엔드 디자인 개발에 이 지침을 적용하세요.
+
+## 1. 색상 시스템
+
+### 1.1 기본 색상 팔레트
+
+| 용도 | 색상명 | HEX | 사용처 |
+|------|--------|-----|--------|
+| 주요 | 파란색 | #409EFF | 버튼, 링크, 강조 |
+| 성공 | 초록색 | #67C23A | 성공 상태, 확인 |
+| 경고 | 주황색 | #E6A23C | 경고, 주의 |
+| 에러 | 빨강색 | #F56C6C | 에러, 삭제 |
+| 정보 | 회색 | #909399 | 정보, 비활성 |
+
+### 1.2 텍스트 색상
+
+```css
+.text-primary { color: #303133; }    /* 주 텍스트 */
+.text-regular { color: #606266; }    /* 일반 텍스트 */
+.text-secondary { color: #909399; }  /* 보조 텍스트 */
+.text-placeholder { color: #c0c4cc; }/* 플레이스홀더 */
+```
+
+### 1.3 배경색
+
+```css
+.bg-light { background: #f5f7fa; }   /* 밝은 배경 */
+.bg-lighter { background: #fafbfc; } /* 매우 밝은 배경 */
+```
+
+## 2. 타이포그래피 규칙
+
+### 2.1 폰트 설정
+
+```css
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #303133;
+}
+```
+
+### 2.2 텍스트 크기
+
+| 용도 | 크기 | 사용처 |
+|------|------|--------|
+| H1 | 24px | 페이지 제목 |
+| H2 | 20px | 섹션 제목 |
+| H3 | 16px | 서브 제목 |
+| 본문 | 14px | 일반 텍스트 |
+| 보조 | 12px | 설명, 플레이스홀더 |
+
+```css
+.text-h1 { font-size: 24px; font-weight: 600; }
+.text-h2 { font-size: 20px; font-weight: 600; }
+.text-h3 { font-size: 16px; font-weight: 600; }
+.text-body { font-size: 14px; }
+.text-small { font-size: 12px; }
+```
+
+## 3. Element Plus 테마 커스터마이징
+
+### 3.1 CSS 변수 (main.css)
+
+```css
+:root {
+    --el-color-primary: #409EFF;
+    --el-color-success: #67C23A;
+    --el-color-warning: #E6A23C;
+    --el-color-danger: #F56C6C;
+    --el-border-radius-base: 4px;
+    --el-font-size-base: 14px;
+}
+```
+
+### 3.2 컴포넌트 커스터마이징
+
+**버튼**:
+```css
+.el-button {
+    border-radius: 4px;
+    height: 32px;
+    font-size: 14px;
+}
+
+.el-button--primary:hover {
+    background-color: #66b1ff;
+}
+```
+
+**입력 필드**:
+```css
+.el-input__wrapper {
+    background-color: #ffffff;
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+}
+
+.el-input__wrapper:hover {
+    border-color: #b3d8ff;
+}
+```
+
+**테이블**:
+```css
+.el-table__header-wrapper {
+    background-color: #f5f7fa;
+}
+
+.el-table__row {
+    height: 36px;
+}
+
+.el-table__row:hover > td {
+    background-color: #f5f7fa;
+}
+```
+
+## 4. 스페이싱 시스템
+
+**패딩/마진 기본값**: 16px, 20px
+**갭(gap)**: 16px
+**라인 하이트**: 1.5
+
+```css
+.p-4 { padding: 1rem; }     /* 16px */
+.p-5 { padding: 1.25rem; }  /* 20px */
+.mb-4 { margin-bottom: 1rem; }
+.gap-4 { gap: 1rem; }
+```
+
+## 5. 그림자 및 테두리
+
+```css
+.shadow-sm { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); }
+.shadow { box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08); }
+.shadow-md { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
+
+.border-light { border: 1px solid #dcdfe6; }
+.border-gray { border: 1px solid #e4e7eb; }
+```
+
+## 6. 반응형 디자인
+
+**최소 권장 너비**: 1280px
+
+```css
+@media (max-width: 1280px) {
+    .app-sidebar {
+        display: none; /* 모바일에서는 사이드바 숨김 */
+    }
+}
+```
+
+**Tailwind 유틸리티**:
+```html
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <!-- 반응형 그리드 -->
+</div>
+```
+
+## 7. 레이아웃 구조 규칙
+
+```
+┌─────────────────────────────────────┐
+│    GNB (전역 내비게이션, 60px)        │
+├──────────┬──────────────────────────┤
+│  LNB     │   메뉴 컨텐츠 영역       │
+│ (240px)  │   (동적 변경)            │
+│          │                          │
+├──────────┴──────────────────────────┤
+│    Footer (선택사항, 40px)           │
+└─────────────────────────────────────┘
+```
+
+**CSS 기본 구조**:
+```css
+.app-layout { display: flex; flex-direction: column; height: 100vh; }
+.app-header { height: 60px; background: white; border-bottom: 1px solid #e4e7eb; }
+.app-container { display: flex; flex: 1; overflow: hidden; }
+.app-sidebar { width: 240px; background: #f5f7fa; border-right: 1px solid #e4e7eb; }
+.app-content { flex: 1; overflow-y: auto; padding: 20px; background: #ffffff; }
+.app-footer { height: 40px; background: #f5f7fa; border-top: 1px solid #e4e7eb; }
+```
+
+## 8. 폼 디자인
+
+**레이블 너비**: 120px (기본)
+
+```css
+.el-form-item__label {
+    color: #303133;
+    font-weight: 500;
+}
+
+.el-form-item {
+    margin-bottom: 20px;
+}
+```
+
+## 9. 메시지/알림
+
+**표준 방식**:
+```javascript
+ElMessage.success('저장되었습니다.');
+ElMessage.error('오류가 발생했습니다.');
+ElMessage.warning('정말 삭제하시겠습니까?');
+
+ElMessageBox.confirm('정말 삭제하시겠습니까?', '삭제 확인')
+    .then(() => { /* 처리 */ });
+```
+
+## 10. 체크리스트
+
+- [ ] 색상: Element Plus 표준 색상 팔레트 사용
+- [ ] 타이포: 폰트 크기 일관성
+- [ ] 스페이싱: 기본값 16px, 20px 사용
+- [ ] 반응형: 1280px 이상 고려
+- [ ] 그림자: 일관된 box-shadow 사용
+- [ ] 레이아웃: GNB 60px, LNB 240px, 일관성 유지
