@@ -44,16 +44,16 @@ INSERT INTO wms.item_master (item_cd, item_name, item_type, item_spec, item_unit
 
 -- =====================================================
 -- 4. 사용자 샘플
--- (password는 bytea 타입: E'\\x...' 형식의 더미 해시값)
+-- password: BCrypt(평문 'admin', cost 10). 백엔드 AuthService에서 matches 검증.
 -- =====================================================
 
-INSERT INTO wms.adm_userinfo (userid, company, usergroupcode, teamcode, username, email, tel, cellphone, ins_person_id) VALUES
-    ('admin',    '본사', 'ADMIN',   'IT',   '시스템관리자', 'admin@wms.com',    '02-1234-0001', '010-0000-0001', 'SYSTEM'),
-    ('manager1', '본사', 'MANAGER', 'WH01', '서울센터장',  'manager1@wms.com', '02-1234-0002', '010-0000-0002', 'SYSTEM'),
-    ('manager2', '본사', 'MANAGER', 'WH03', '부산센터장',  'manager2@wms.com', '051-987-0001', '010-0000-0003', 'SYSTEM'),
-    ('worker1',  '본사', 'WORKER',  'WH01', '입고작업자1', 'worker1@wms.com',  '02-1234-0003', '010-0000-0004', 'SYSTEM'),
-    ('worker2',  '본사', 'WORKER',  'WH01', '출고작업자1', 'worker2@wms.com',  '02-1234-0004', '010-0000-0005', 'SYSTEM'),
-    ('viewer1',  '본사', 'VIEWER',  'WH01', '조회자1',    'viewer1@wms.com',  '02-1234-0005', '010-0000-0006', 'SYSTEM');
+INSERT INTO wms.adm_userinfo (userid, company, usergroupcode, teamcode, username, password, email, tel, cellphone, ins_person_id) VALUES
+    ('admin',    '본사', 'ADMIN',   'IT',   '시스템관리자', '$2y$10$kYA71dhwyv0YtRcHxFXlK.pwwyJUwlO6WEFCkmTlLnSh0aaJulk.W', 'admin@wms.com',    '02-1234-0001', '010-0000-0001', 'SYSTEM'),
+    ('manager1', '본사', 'MANAGER', 'WH01', '서울센터장',  '$2y$10$kYA71dhwyv0YtRcHxFXlK.pwwyJUwlO6WEFCkmTlLnSh0aaJulk.W', 'manager1@wms.com', '02-1234-0002', '010-0000-0002', 'SYSTEM'),
+    ('manager2', '본사', 'MANAGER', 'WH03', '부산센터장',  '$2y$10$kYA71dhwyv0YtRcHxFXlK.pwwyJUwlO6WEFCkmTlLnSh0aaJulk.W', 'manager2@wms.com', '051-987-0001', '010-0000-0003', 'SYSTEM'),
+    ('worker1',  '본사', 'WORKER',  'WH01', '입고작업자1', '$2y$10$kYA71dhwyv0YtRcHxFXlK.pwwyJUwlO6WEFCkmTlLnSh0aaJulk.W', 'worker1@wms.com',  '02-1234-0003', '010-0000-0004', 'SYSTEM'),
+    ('worker2',  '본사', 'WORKER',  'WH01', '출고작업자1', '$2y$10$kYA71dhwyv0YtRcHxFXlK.pwwyJUwlO6WEFCkmTlLnSh0aaJulk.W', 'worker2@wms.com',  '02-1234-0004', '010-0000-0005', 'SYSTEM'),
+    ('viewer1',  '본사', 'VIEWER',  'WH01', '조회자1',    '$2y$10$kYA71dhwyv0YtRcHxFXlK.pwwyJUwlO6WEFCkmTlLnSh0aaJulk.W', 'viewer1@wms.com',  '02-1234-0005', '010-0000-0006', 'SYSTEM');
 
 -- =====================================================
 -- 5. 입고 주문 샘플 (WH01 - 서울 물류센터)
