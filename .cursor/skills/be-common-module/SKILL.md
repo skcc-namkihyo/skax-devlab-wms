@@ -8,6 +8,8 @@ description: "BE 공통모듈 초기 생성 | Spring Boot Common Module Setup (S
 
 Spring Boot 프로젝트의 공통 모듈을 초기 생성합니다. 이 Skill은 프로젝트에 공통 모듈이 아직 존재하지 않을 때만 실행됩니다.
 
+**로그인(JWT) 도메인**: `wms.adm_userinfo` 조회·BCrypt 검증·`/api/auth/login`은 공통 모듈 밖의 `AdmUserinfoMapper` / `AuthService` / `AuthController`에 둡니다. 패턴은 **`be-service-mapper`**, **`be-controller`** Skill의 인증 참고 절을 따릅니다.
+
 **사용 시점**: `/dev-be` 실행 시 공통 모듈이 없는 경우(Step 0)
 **선행 조건**: 아래「프로젝트 변수」표의 값을 확정하거나, 실행 시 사용자 질의로 수집한다.
 
@@ -82,6 +84,8 @@ package {BASE_PACKAGE}.config;
 import {BASE_PACKAGE}.auth.filter.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -113,14 +117,17 @@ public class SecurityConfig {
     }
 
     @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(
             "http://localhost:3000",
-            "http://localhost:4000",
-            "http://localhost:5500",
             "http://127.0.0.1:3000",
-            "http://127.0.0.1:4000",
+            "http://localhost:5500",
             "http://127.0.0.1:5500"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
@@ -135,10 +142,9 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        http.cors(c -> c.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
@@ -151,8 +157,7 @@ public class SecurityConfig {
                     "/swagger-resources/**",
                     "/webjars/**"
                 ).permitAll()
-                .anyRequest().authenticated()
-            );
+                .anyRequest().authenticated());
 
         return http.build();
     }
@@ -172,7 +177,6 @@ import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
-import org.springdoc.core.models.GroupedOpenApi;
 import org.springdoc.core.utils.SpringDocUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -198,7 +202,7 @@ public class SwaggerConfig {
             SpringDocUtils.getConfig().replaceWithSchema(java.util.HashMap.class, new ObjectSchema());
             SpringDocUtils.getConfig().replaceWithSchema(java.util.LinkedHashMap.class, new ObjectSchema());
         } catch (Exception e) {
-            System.err.println("Swagger Map schema configuration failed: " + e.getMessage());
+            System.err.println("Swagger Map 스키마 설정 실패: " + e.getMessage());
         }
     }
 
@@ -207,15 +211,11 @@ public class SwaggerConfig {
         final String securitySchemeName = "bearerAuth";
         return new OpenAPI()
             .info(new Info()
-                .title("{PROJECT_NAME} API")
+                .title("{PROJECT_NAME} REST API")
                 .version("1.0.0")
-                .description("{PROJECT_NAME} REST API 문서")
-                .contact(new Contact()
-                    .name("WMS Team")
-                    .email("support@wms.com")))
-            .servers(List.of(
-                new Server().url("http://localhost:8080").description("로컬 개발 서버")
-            ))
+                .description("{PROJECT_NAME} 교육 프로젝트 API")
+                .contact(new Contact().name("WMS Team")))
+            .servers(List.of(new Server().url("http://localhost:8080").description("로컬")))
             .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
             .components(new Components()
                 .addSecuritySchemes(securitySchemeName,
@@ -224,14 +224,6 @@ public class SwaggerConfig {
                         .type(SecurityScheme.Type.HTTP)
                         .scheme("bearer")
                         .bearerFormat("JWT")));
-    }
-
-    @Bean
-    public GroupedOpenApi publicApi() {
-        return GroupedOpenApi.builder()
-            .group("public")
-            .pathsToMatch("/api/**")
-            .build();
     }
 }
 ```
@@ -469,18 +461,15 @@ public class HealthController {
 
 ### 9. DbHealthController.java
 
+> WMS 현행: Mapper 의존 없이 `JdbcTemplate`으로 `SELECT 1` 프로브 (DataSource만 있으면 동작).
+
 ```java
 package {BASE_PACKAGE}.common.controller;
 
-import {BASE_PACKAGE}.domain.user.mapper.UserMapper;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -489,50 +478,40 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 데이터베이스 연결 상태 확인을 위한 헬스체크 컨트롤러.
+ * 데이터베이스 연결 상태 확인 (SELECT 1).
  *
  * @author {AUTHOR}
  * @Date {DATE}
  */
 @RestController
 @RequestMapping("/api/health/db")
-@Tag(name = "헬스체크", description = "데이터베이스 연결 상태 확인 API")
+@Tag(name = "DB 헬스체크")
 public class DbHealthController {
 
-    private final UserMapper userMapper;
+    private final JdbcTemplate jdbcTemplate;
 
-    public DbHealthController(UserMapper userMapper) {
-        this.userMapper = userMapper;
+    public DbHealthController(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @GetMapping
-    @Operation(summary = "데이터베이스 연결 상태 확인", description = "PostgreSQL 데이터베이스 연결 상태를 확인합니다.")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "데이터베이스 연결 정상",
-            content = @Content(mediaType = "application/json", schema = @Schema(type = "object"),
-                examples = @ExampleObject(name = "DB 연결 정상",
-                    value = "{\"status\": \"UP\", \"message\": \"데이터베이스 연결이 정상입니다.\", \"database\": \"PostgreSQL\"}"))),
-        @ApiResponse(responseCode = "503", description = "데이터베이스 연결 실패",
-            content = @Content(mediaType = "application/json", schema = @Schema(type = "object"),
-                examples = @ExampleObject(name = "DB 연결 실패",
-                    value = "{\"status\": \"DOWN\", \"message\": \"데이터베이스 연결 실패: Connection refused\", \"error\": \"SQLException\"}")))
-    })
+    @Operation(
+            summary = "PostgreSQL 연결 확인",
+            description = "SELECT 1 프로브. 인증 불필요(permitAll). 실패 시 HTTP 503")
     public ResponseEntity<Map<String, Object>> dbHealth() {
-        Map<String, Object> response = new HashMap<>();
-
+        Map<String, Object> body = new HashMap<>();
         try {
-            userMapper.selectUserByEmail("test@test.com");
-            response.put("status", "UP");
-            response.put("message", "데이터베이스 연결이 정상입니다.");
-            response.put("database", "PostgreSQL");
+            Integer one = jdbcTemplate.queryForObject("SELECT 1", Integer.class);
+            body.put("status", "UP");
+            body.put("message", "데이터베이스 연결이 정상입니다.");
+            body.put("database", "PostgreSQL");
+            body.put("probe", one);
+            return ResponseEntity.ok(body);
         } catch (Exception e) {
-            response.put("status", "DOWN");
-            response.put("message", "데이터베이스 연결 실패: " + e.getMessage());
-            response.put("error", e.getClass().getSimpleName());
-            return ResponseEntity.status(503).body(response);
+            body.put("status", "DOWN");
+            body.put("message", "데이터베이스 연결 실패: " + e.getMessage());
+            return ResponseEntity.status(503).body(body);
         }
-
-        return ResponseEntity.ok(response);
     }
 }
 ```
@@ -580,28 +559,27 @@ public class JwtUtil {
         this.refreshTokenExpiration = refreshTokenExpiration;
     }
 
-    public String generateAccessToken(Long userId, String email, String userType) {
+    /** Access: subject·클레임에 userid / username / usergroupcode (필터·프론트 연동) */
+    public String generateAccessToken(String userid, String username, String usergroupcode) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("userId", userId);
-        claims.put("email", email);
-        claims.put("userType", userType);
-
+        claims.put("userid", userid);
+        claims.put("username", username);
+        claims.put("usergroupcode", usergroupcode);
         return Jwts.builder()
             .claims(claims)
-            .subject(String.valueOf(userId))
+            .subject(userid)
             .issuedAt(new Date())
             .expiration(new Date(System.currentTimeMillis() + accessTokenExpiration))
             .signWith(secretKey)
             .compact();
     }
 
-    public String generateRefreshToken(Long userId) {
+    public String generateRefreshToken(String userid) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("type", "refresh");
-
         return Jwts.builder()
             .claims(claims)
-            .subject(String.valueOf(userId))
+            .subject(userid)
             .issuedAt(new Date())
             .expiration(new Date(System.currentTimeMillis() + refreshTokenExpiration))
             .signWith(secretKey)
@@ -621,11 +599,6 @@ public class JwtUtil {
         return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload();
     }
 
-    public Long getUserIdFromToken(String token) {
-        Claims claims = getClaimsFromToken(token);
-        return Long.parseLong(claims.getSubject());
-    }
-
     public boolean isTokenExpired(String token) {
         try {
             Claims claims = getClaimsFromToken(token);
@@ -643,6 +616,7 @@ public class JwtUtil {
 package {BASE_PACKAGE}.auth.filter;
 
 import {BASE_PACKAGE}.auth.util.JwtUtil;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -694,21 +668,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             if (jwtUtil.validateToken(token) && !jwtUtil.isTokenExpired(token)) {
-                Long userId = jwtUtil.getUserIdFromToken(token);
-                io.jsonwebtoken.Claims claims = jwtUtil.getClaimsFromToken(token);
-                String userType = (String) claims.get("userType");
-
+                Claims claims = jwtUtil.getClaimsFromToken(token);
+                String userid = claims.getSubject();
+                String group = claims.get("usergroupcode") != null
+                        ? claims.get("usergroupcode").toString()
+                        : "USER";
                 List<SimpleGrantedAuthority> authorities = Collections.singletonList(
-                    new SimpleGrantedAuthority("ROLE_" + (userType != null ? userType : "USER"))
-                );
-
+                        new SimpleGrantedAuthority("ROLE_" + group));
                 UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(userId, null, authorities);
+                        new UsernamePasswordAuthenticationToken(userid, null, authorities);
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception e) {
-            logger.debug("JWT token validation failed: " + e.getMessage(), e);
+            logger.debug("JWT 검증 실패: " + e.getMessage());
         }
 
         filterChain.doFilter(request, response);
@@ -718,6 +691,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 ### 12. application.yml
 
+> WMS 현행과 동일한 키 구조. JDBC URL·계정은 로컬/Neon/Azure 환경에 맞게 수정 (비밀번호는 저장소 커밋 시 주의).
+
 ```yaml
 spring:
   application:
@@ -725,26 +700,26 @@ spring:
 
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/wmsdb
-    username: wms_api
-    password: Api@123
+    # DB wms: database/schemas/00_azure_create_database_wms.sql (Azure DBA) 등 — 환경별 URL
+    url: jdbc:postgresql://localhost:5432/postgres?sslmode=prefer
+    username: wms_app
+    password: "changeme"
     hikari:
       maximum-pool-size: 10
-      minimum-idle: 5
+      minimum-idle: 2
       connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
 
 mybatis:
-  mapper-locations: classpath:mappers/**/*.xml
-  type-aliases-package: {BASE_PACKAGE}.domain
+  mapper-locations: classpath:mapper/**/*.xml
   configuration:
-    map-underscore-to-camel-case: true
+    # 프론트·Mock JSON과 동일하게 snake_case 키 유지
+    map-underscore-to-camel-case: false
     default-fetch-size: 100
     default-statement-timeout: 30
 
 jwt:
-  secret: {PROJECT_SIMPLE_NAME_LOWER}-jwt-secret-key-for-development-only-change-in-production
+  # HS256용 최소 32바이트 이상
+  secret: {PROJECT_SIMPLE_NAME_LOWER}-jwt-secret-key-for-development-only-min-32-chars-required!!
   access-token-expiration: 3600000
   refresh-token-expiration: 604800000
 
@@ -754,39 +729,30 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     enabled: true
-    config-url: /v3/api-docs/swagger-config
-    url: /v3/api-docs
-  default-consumes-media-type: application/json
-  default-produces-media-type: application/json
-  show-actuator: false
-  packages-to-scan: {BASE_PACKAGE}.domain
-  paths-to-match: /api/**
-  model-and-view-allowed: false
+  packages-to-scan: {BASE_PACKAGE}
 
 logging:
   level:
     {BASE_PACKAGE}: DEBUG
-    org.springframework.security: DEBUG
+    org.springframework.security: INFO
     org.mybatis: DEBUG
 ```
 
 ### 13. messages.properties
 
-```properties
-# 성공 메시지
-I0001=정상적으로 처리되었습니다.
-I0002=회원가입이 완료되었습니다.
-I0003=로그인되었습니다.
-I0004=로그아웃되었습니다.
-I0005=토큰이 갱신되었습니다.
+> WMS 백엔드 `messages/messages.properties` 현행 요약 (로그인·배치·조회 공통 코드).
 
-# 에러 메시지
-E1001=이미 등록된 이메일입니다.
-E1002=올바른 이메일 형식이 아닙니다.
-E1003=비밀번호는 8자 이상, 영문/숫자/특수문자 조합이어야 합니다.
-E1004=이메일 또는 비밀번호가 올바르지 않습니다.
-E1005=토큰이 만료되었습니다.
-E1006=유효하지 않은 토큰입니다.
+```properties
+# 성공
+I0001=정상적으로 처리되었습니다.
+I0002=조회되었습니다.
+I0003=로그인되었습니다.
+
+# 오류
+E1001=비즈니스 규칙 위반입니다.
+E1002=재처리 요청이 거절되었습니다. (중복 또는 정책 위반)
+E1004=사용자 ID 또는 비밀번호가 올바르지 않습니다.
+E2001=요청한 데이터를 찾을 수 없습니다.
 E9999=시스템 오류가 발생했습니다.
 ```
 
@@ -801,11 +767,11 @@ E9999=시스템 오류가 발생했습니다.
 
 - [ ] 모든 `{변수명}`이 실제 값으로 치환되었는가?
 - [ ] Application.java 클래스명이 PascalCase인가?
-- [ ] SecurityConfig에 CORS 설정이 포함되었는가?
+- [ ] SecurityConfig에 CORS·`PasswordEncoder`(BCrypt) 설정이 포함되었는가?
 - [ ] SwaggerConfig에 Map 스키마 처리가 있는가?
 - [ ] BizException에 errorCode 필드가 있는가?
 - [ ] GlobalExceptionHandler가 BizException과 Exception을 모두 처리하는가?
 - [ ] ResponseUtil이 result_code/result_message 형식을 사용하는가? (success 필드 없음)
-- [ ] JwtUtil에 Access/Refresh Token 생성이 모두 있는가?
+- [ ] JwtUtil이 `userid`/`username`/`usergroupcode` 기반 Access·Refresh 생성과 필터 클레임이 일치하는가?
 - [ ] application.yml에 mybatis, jwt, springdoc 설정이 있는가?
 - [ ] messages.properties에 I/E 코드가 정의되었는가?

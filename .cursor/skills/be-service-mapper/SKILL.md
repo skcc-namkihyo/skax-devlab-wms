@@ -201,6 +201,8 @@ public interface UserMapper {
 
 ### MyBatis Mapper XML
 
+> WMS 레포: XML 파일은 `src/main/resources/mapper/` 아래에 둡니다 (`application.yml`의 `classpath:mapper/**/*.xml`).
+
 ```xml
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
@@ -296,11 +298,41 @@ public interface UserMapper {
 </mapper>
 ```
 
+### 로그인용 `AdmUserinfoMapper` (WMS 현행)
+
+- 인터페이스: `com.execnt.wms.mapper.AdmUserinfoMapper`
+- XML: `src/main/resources/mapper/AdmUserinfoMapper.xml` (`classpath:mapper/**/*.xml` 와 일치)
+- 메서드 예: `selectUserForLogin(Map)` → `wms.adm_userinfo`에서 `userid`로 1건, BCrypt 검증은 `AuthService`에서 `PasswordEncoder`로 처리.
+
+```java
+package com.execnt.wms.mapper;
+
+import org.apache.ibatis.annotations.Mapper;
+import java.util.Map;
+
+@Mapper
+public interface AdmUserinfoMapper {
+    Map<String, Object> selectUserForLogin(Map<String, Object> params);
+}
+```
+
+```xml
+<mapper namespace="com.execnt.wms.mapper.AdmUserinfoMapper">
+    <select id="selectUserForLogin" parameterType="map" resultType="map">
+        SELECT userid, username, usergroupcode, password, use_yn, lock_yn
+        FROM wms.adm_userinfo
+        WHERE userid = #{userid}
+    </select>
+</mapper>
+```
+
+`AuthService`는 위 Mapper로 행을 읽은 뒤 `use_yn`/`lock_yn`/비밀번호를 검증하고 `JwtUtil`로 토큰을 발급합니다.
+
 ## 사용 가이드
 
 1. **Service 클래스 생성**: `wms/service/[Domain]Service.java`
 2. **Mapper Interface 생성**: `wms/mapper/[Domain]Mapper.java` (@Mapper 필수)
-3. **XML 매퍼 생성**: `resources/mappers/[domain]/[Domain]Mapper.xml`
+3. **XML 매퍼 생성**: WMS 표준은 `src/main/resources/mapper/[Domain]Mapper.xml` (복수형 `mappers/` 디렉터리가 아님)
 4. **경로 일치 확인**: namespace = com.execnt.wms.mapper.[Domain]Mapper
 5. **트랜잭션 처리**: CUD 메서드에 @Transactional 추가
 6. **예외 처리**: BizException 사용 (비즈니스 규칙 위반)
@@ -310,7 +342,7 @@ public interface UserMapper {
 
 - [ ] Service 클래스 생성
 - [ ] Mapper Interface 생성 (@Mapper 필수)
-- [ ] XML 매퍼 파일 생성 (경로: resources/mappers/)
+- [ ] XML 매퍼 파일 생성 (WMS: `resources/mapper/`)
 - [ ] namespace 일치 확인
 - [ ] CRUD 메서드 구현
 - [ ] 동적 SQL <where>, <set> 사용
