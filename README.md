@@ -178,4 +178,109 @@ python3 -m http.server 3000
 # 브라우저: http://localhost:3000
 ```
 
-**갱신**: 2026-03-25
+
+> 교육 실습에 사용하는 **Azure Database for PostgreSQL** DB 접속 정보.
+> 
+
+> ⚠️ 전원 동일 DB 계정 사용. 개인별 스키마 분리 없음.
+> 
+
+---
+
+## 공통 접속 정보
+
+| 항목 | 값 |
+| --- | --- |
+| Host | `skax-dev-db1.postgres.database.azure.com` |
+| Port | `5432` |
+| Database | `postgres` |
+| SSL | **required** (Azure 기본 정책) |
+
+---
+
+## DB 계정 정보
+
+| 구분 | User | Password | 용도 |
+| --- | --- | --- | --- |
+| 🖥️ 서버용 | `tms_developer` | `TmsDeveloper@2026` | application.yml (Backend 연동) |
+| 👤 개인용 | `dba01` | `SKax2025!` | DBeaver / psql (DDL+DML) |
+
+---
+
+## Connection String
+
+| 용도 | Connection String |
+| --- | --- |
+| 서버용 (application.yml) | `jdbc:postgresql://skax-dev-db1.postgres.database.azure.com:5432/postgres` |
+| 서버용 (일반) | `postgresql://tms_developer:TmsDeveloper@2026@skax-dev-db1.postgres.database.azure.com:5432/postgres?sslmode=require` |
+| 개인용 (DBeaver) | `postgresql://dba01:SKax2025!@skax-dev-db1.postgres.database.azure.com:5432/postgres?sslmode=require` |
+
+---
+
+## application.yml 설정
+
+```yaml
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://skax-dev-db1.postgres.database.azure.com:5432/postgres
+    username: tms_developer
+    password: TmsDeveloper@2026
+```
+
+---
+
+## DBeaver 설정 순서
+
+1. DBeaver 실행 → **Database** → **New Database Connection**
+2. **PostgreSQL** 선택 → Next
+3. 접속 정보 입력:
+
+| 필드 | 값 |
+| --- | --- |
+| Host | `skax-dev-db1.postgres.database.azure.com` |
+| Port | `5432` |
+| Database | `postgres` |
+| Username | `dba01` |
+| Password | `SKax2025!` |
+1. **SSL** 탭 → ✅ **Use SSL** 체크, SSL Mode: `require`
+2. **Test Connection** 클릭 → **Connected** 확인
+3. **Finish**
+
+---
+
+## 접속 확인 테스트 쿼리
+
+### 1. 데이터베이스 접속 확인
+
+```sql
+SELECT current_database(), current_user, version();
+-- 기대 결과: postgres / dba01 / PostgreSQL 버전 정보
+```
+
+### 2. 스키마 목록 확인
+
+```sql
+SELECT schema_name FROM information_schema.schemata 
+WHERE schema_name NOT IN ('pg_catalog', 'information_schema')
+ORDER BY schema_name;
+```
+
+### 3. 테이블 목록 확인
+
+```sql
+SELECT table_schema, table_name FROM information_schema.tables 
+WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
+ORDER BY table_schema, table_name;
+```
+
+---
+
+## 주의사항
+
+- ⚠️ **전원 동일 DB 공유** — 다른 교육생의 데이터를 삭제/변경하지 않도록 주의
+- ⚠️ **DDL 작업 시** `dba01` 계정 사용 권장
+- ⚠️ **Azure SSL 필수** — DB 연결이 안 되면 SSL 설정(`sslmode=require`)을 재확인
+- ⚠️ **방화벽** — 사내 네트워크에서 Azure 5432 포트 접근이 차단될 수 있음 → 네트워크 담당자 확인
+- 
+**갱신**: 2026-03-27
