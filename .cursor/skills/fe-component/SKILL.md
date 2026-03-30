@@ -262,6 +262,8 @@ export default defineComponent({
 
 ### 메시지/알림
 
+> 실제 `.js` 모듈에서는 `frontend.dev.mdc` 4절에 따라 파일 상단에 `const { ElMessage } = ElementPlus` 또는 `const { ElMessage, ElMessageBox } = ElementPlus` 를 둔 뒤 아래 API를 호출한다.
+
 ```javascript
 // 성공 메시지
 ElMessage.success('저장되었습니다.');

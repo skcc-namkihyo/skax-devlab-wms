@@ -16,57 +16,61 @@ Vue 3 Composition API 기반 핵심 유틸리티 Composable 3개를 제공합니
 
 ```javascript
 // composables/useApi.js
-import api from '../api.js';
+import api from "../api.js";
+
+const { ElMessage } = ElementPlus;
 
 export const useApi = () => {
-    const loading = Vue.ref(false);
-    const error = Vue.ref(null);
+  const loading = Vue.ref(false);
+  const error = Vue.ref(null);
 
-    /**
-     * API 요청 (GET, POST, PUT, DELETE)
-     * @param {string} method HTTP 메서드 (get, post, put, delete)
-     * @param {string} url 요청 URL
-     * @param {object} data 요청 데이터 (선택사항)
-     * @param {object} config Axios 설정 (선택사항)
-     * @returns {Promise} 응답 데이터
-     */
-    const request = async (method, url, data = null, config = {}) => {
-        loading.value = true;
-        error.value = null;
+  /**
+   * API 요청 (GET, POST, PUT, DELETE)
+   * @param {string} method HTTP 메서드 (get, post, put, delete)
+   * @param {string} url 요청 URL
+   * @param {object} data 요청 데이터 (선택사항)
+   * @param {object} config Axios 설정 (선택사항)
+   * @returns {Promise} 응답 데이터
+   */
+  const request = async (method, url, data = null, config = {}) => {
+    loading.value = true;
+    error.value = null;
 
-        try {
-            let response;
-            switch (method.toLowerCase()) {
-                case 'get':
-                    response = await api.get(url, { params: data, ...config });
-                    break;
-                case 'post':
-                    response = await api.post(url, data, config);
-                    break;
-                case 'put':
-                    response = await api.put(url, data, config);
-                    break;
-                case 'delete':
-                    response = await api.delete(url, config);
-                    break;
-                default:
-                    throw new Error(`Unknown method: ${method}`);
-            }
-            return response;
-        } catch (err) {
-            error.value = err.response?.data?.message || err.message || '요청 처리 중 오류 발생';
-            ElMessage.error(error.value);
-            throw err;
-        } finally {
-            loading.value = false;
-        }
-    };
+    try {
+      let response;
+      switch (method.toLowerCase()) {
+        case "get":
+          response = await api.get(url, { params: data, ...config });
+          break;
+        case "post":
+          response = await api.post(url, data, config);
+          break;
+        case "put":
+          response = await api.put(url, data, config);
+          break;
+        case "delete":
+          response = await api.delete(url, config);
+          break;
+        default:
+          throw new Error(`Unknown method: ${method}`);
+      }
+      return response;
+    } catch (err) {
+      error.value =
+        err.response?.data?.message || err.message || "요청 처리 중 오류 발생";
+      ElMessage.error(error.value);
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
 
-    return { loading, error, request };
+  return { loading, error, request };
 };
 ```
 
 **사용 예시**:
+
 ```javascript
 setup() {
     const { loading, error, request } = useApi();
@@ -90,98 +94,102 @@ setup() {
 
 ```javascript
 // composables/useAuth.js
-import api from '../api.js';
-import store from '../store.js';
+import api from "../api.js";
+import store from "../store.js";
 
 const { computed } = Vue;
+const { ElMessage } = ElementPlus;
 
 export const useAuth = () => {
-    const isAuthenticated = computed(() => !!store.token);
-    const currentUser = computed(() => store.user);
+  const isAuthenticated = computed(() => !!store.token);
+  const currentUser = computed(() => store.user);
 
-    /**
-     * 로그인
-     * BE POST /api/auth/login 호출
-     * 요청: { userid, password }
-     * 응답: { result_code, data: { accessToken, refreshToken, userid, username, usergroupcode } }
-     */
-    const login = async (userId, password) => {
-        try {
-            const response = await api.post('/auth/login', {
-                userid: userId,
-                password: password
-            });
-            const data = response.data || response;
+  /**
+   * 로그인
+   * BE POST /api/auth/login 호출
+   * 요청: { userid, password }
+   * 응답: { result_code, data: { accessToken, refreshToken, userid, username, usergroupcode } }
+   */
+  const login = async (userId, password) => {
+    try {
+      const response = await api.post("/auth/login", {
+        userid: userId,
+        password: password,
+      });
+      const data = response.data || response;
 
-            // accessToken → localStorage('token')에 저장
-            store.setToken(data.accessToken);
-            // 사용자 정보 객체로 저장
-            store.setUser({
-                userid: data.userid,
-                username: data.username,
-                usergroupcode: data.usergroupcode
-            });
-            // refreshToken은 별도 저장
-            if (data.refreshToken) {
-                localStorage.setItem('refreshToken', data.refreshToken);
-            }
+      // accessToken → localStorage('token')에 저장
+      store.setToken(data.accessToken);
+      // 사용자 정보 객체로 저장
+      store.setUser({
+        userid: data.userid,
+        username: data.username,
+        usergroupcode: data.usergroupcode,
+      });
+      // refreshToken은 별도 저장
+      if (data.refreshToken) {
+        localStorage.setItem("refreshToken", data.refreshToken);
+      }
 
-            ElMessage.success('로그인되었습니다.');
-            return data;
-        } catch (err) {
-            ElMessage.error(err.response?.data?.result_message || '로그인에 실패했습니다.');
-            throw err;
-        }
-    };
+      ElMessage.success("로그인되었습니다.");
+      return data;
+    } catch (err) {
+      ElMessage.error(
+        err.response?.data?.result_message || "로그인에 실패했습니다.",
+      );
+      throw err;
+    }
+  };
 
-    /**
-     * 로그아웃
-     * token, refreshToken 모두 삭제 후 /login 이동
-     */
-    const logout = () => {
-        store.setToken(null);
-        store.setUser(null);
-        localStorage.removeItem('refreshToken');
-        ElMessage.success('로그아웃되었습니다.');
-        window.location.hash = '#/login';
-    };
+  /**
+   * 로그아웃
+   * token, refreshToken 모두 삭제 후 /login 이동
+   */
+  const logout = () => {
+    store.setToken(null);
+    store.setUser(null);
+    localStorage.removeItem("refreshToken");
+    ElMessage.success("로그아웃되었습니다.");
+    window.location.hash = "#/login";
+  };
 
-    /**
-     * 토큰 갱신
-     * BE POST /api/auth/refresh 호출
-     * 요청: { refreshToken }
-     * 응답: { result_code, data: { accessToken } }
-     */
-    const refreshToken = async () => {
-        const savedRefreshToken = localStorage.getItem('refreshToken');
-        if (!savedRefreshToken) {
-            logout();
-            return;
-        }
-        try {
-            const response = await api.post('/auth/refresh', {
-                refreshToken: savedRefreshToken
-            });
-            const data = response.data || response;
-            store.setToken(data.accessToken);
-            return data;
-        } catch (err) {
-            logout();
-            throw err;
-        }
-    };
+  /**
+   * 토큰 갱신
+   * BE POST /api/auth/refresh 호출
+   * 요청: { refreshToken }
+   * 응답: { result_code, data: { accessToken } }
+   */
+  const refreshToken = async () => {
+    const savedRefreshToken = localStorage.getItem("refreshToken");
+    if (!savedRefreshToken) {
+      logout();
+      return;
+    }
+    try {
+      const response = await api.post("/auth/refresh", {
+        refreshToken: savedRefreshToken,
+      });
+      const data = response.data || response;
+      store.setToken(data.accessToken);
+      return data;
+    } catch (err) {
+      logout();
+      throw err;
+    }
+  };
 
-    return { isAuthenticated, currentUser, login, logout, refreshToken };
+  return { isAuthenticated, currentUser, login, logout, refreshToken };
 };
 ```
 
 **사용 예시**:
+
 ```javascript
 setup() {
     const { isAuthenticated, currentUser, login, logout } = useAuth();
 
     const handleLogin = async () => {
-        await login('admin', 'admin123');  // userid 기반 (email 아님)
+        await login('admin', 'admin');  // userid 기반 (email 아님)
     };
 
     return { isAuthenticated, currentUser, handleLogin, logout };
@@ -193,88 +201,91 @@ setup() {
 ```javascript
 // composables/useFormValidation.js
 export const useFormValidation = () => {
-    /**
-     * 이메일 검증
-     * @param {string} email 이메일
-     * @returns {boolean}
-     */
-    const validateEmail = (email) => {
-        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return re.test(email);
-    };
+  /**
+   * 이메일 검증
+   * @param {string} email 이메일
+   * @returns {boolean}
+   */
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
 
-    /**
-     * 비밀번호 검증
-     * 8자 이상, 대문자/소문자/숫자/특수문자 조합
-     * @param {string} password 비밀번호
-     * @returns {boolean}
-     */
-    const validatePassword = (password) => {
-        const re = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-        return re.test(password);
-    };
+  /**
+   * 비밀번호 검증
+   * 8자 이상, 대문자/소문자/숫자/특수문자 조합
+   * @param {string} password 비밀번호
+   * @returns {boolean}
+   */
+  const validatePassword = (password) => {
+    const re =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    return re.test(password);
+  };
 
-    /**
-     * 전화번호 검증 (형식: 01X-XXXX-XXXX)
-     * @param {string} phone 전화번호
-     * @returns {boolean}
-     */
-    const validatePhoneNumber = (phone) => {
-        const re = /^01[0-9]-\d{3,4}-\d{4}$/;
-        return re.test(phone);
-    };
+  /**
+   * 전화번호 검증 (형식: 01X-XXXX-XXXX)
+   * @param {string} phone 전화번호
+   * @returns {boolean}
+   */
+  const validatePhoneNumber = (phone) => {
+    const re = /^01[0-9]-\d{3,4}-\d{4}$/;
+    return re.test(phone);
+  };
 
-    /**
-     * 폼 전체 검증
-     * @param {object} form 폼 데이터
-     * @param {object} rules 검증 규칙
-     * @returns {object} 에러 객체
-     */
-    const validateForm = (form, rules) => {
-        const errors = {};
+  /**
+   * 폼 전체 검증
+   * @param {object} form 폼 데이터
+   * @param {object} rules 검증 규칙
+   * @returns {object} 에러 객체
+   */
+  const validateForm = (form, rules) => {
+    const errors = {};
 
-        for (const [field, fieldRules] of Object.entries(rules)) {
-            const value = form[field];
+    for (const [field, fieldRules] of Object.entries(rules)) {
+      const value = form[field];
 
-            for (const rule of fieldRules) {
-                // 필수 필드 검증
-                if (rule.required && !value) {
-                    errors[field] = rule.message || `${field}은(는) 필수입니다.`;
-                    break;
-                }
-
-                // 커스텀 검증
-                if (rule.validator && value && !rule.validator(value)) {
-                    errors[field] = rule.message;
-                    break;
-                }
-
-                // 최소/최대 길이
-                if (rule.min && value && value.length < rule.min) {
-                    errors[field] = `${field}은(는) 최소 ${rule.min}자 이상이어야 합니다.`;
-                    break;
-                }
-
-                if (rule.max && value && value.length > rule.max) {
-                    errors[field] = `${field}은(는) 최대 ${rule.max}자 이하여야 합니다.`;
-                    break;
-                }
-            }
+      for (const rule of fieldRules) {
+        // 필수 필드 검증
+        if (rule.required && !value) {
+          errors[field] = rule.message || `${field}은(는) 필수입니다.`;
+          break;
         }
 
-        return errors;
-    };
+        // 커스텀 검증
+        if (rule.validator && value && !rule.validator(value)) {
+          errors[field] = rule.message;
+          break;
+        }
 
-    return {
-        validateEmail,
-        validatePassword,
-        validatePhoneNumber,
-        validateForm
-    };
+        // 최소/최대 길이
+        if (rule.min && value && value.length < rule.min) {
+          errors[field] =
+            `${field}은(는) 최소 ${rule.min}자 이상이어야 합니다.`;
+          break;
+        }
+
+        if (rule.max && value && value.length > rule.max) {
+          errors[field] = `${field}은(는) 최대 ${rule.max}자 이하여야 합니다.`;
+          break;
+        }
+      }
+    }
+
+    return errors;
+  };
+
+  return {
+    validateEmail,
+    validatePassword,
+    validatePhoneNumber,
+    validateForm,
+  };
 };
 ```
 
 **사용 예시**:
+
 ```javascript
 setup() {
     const { validateForm, validateEmail } = useFormValidation();

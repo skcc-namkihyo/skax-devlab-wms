@@ -75,12 +75,14 @@ frontend/
 - **CDN 로딩 순서**: Vue → VueRouter → Element Plus CSS → Element Plus JS → 로케일 → Icons → Tailwind → Axios
 - Element Plus 한글 로케일 설정: `locale/ko.js`
 - 앱 진입점: `<script type="module" src="./app.js">`
+- **`window.ElMessage` / `window.ElMessageBox` 할당 스크립트는 사용하지 않음** — ES 모듈(`app.js`, `composables`, `views` 등)은 아래 **4절** 규칙에 따라 파일 상단에서 `ElementPlus` 구조 분해
 
 ### 3.2 app.js (Vue 초기화)
 
 - `createApp`으로 Vue 앱 생성
 - `ElementPlus`, `router` 플러그인 등록
 - `createApp()` 호출 후 전역 에러 핸들러 설정
+- 전역 에러 핸들러에서 메시지를 띄울 때: `const { ElMessage } = ElementPlus;` 후 `ElMessage.error(...)` (4절 참고)
 
 → 상세 코드: `fe-scaffold` Skill 참조
 
@@ -125,11 +127,27 @@ const { defineComponent, ref, reactive, computed, onMounted } = Vue;
 
 // Vue Router (전역 변수)
 const { useRouter, useRoute } = VueRouter;
-
-// Element Plus 메시지/다이얼로그
-ElMessage.success('저장되었습니다.');
-ElMessageBox.confirm('삭제하시겠습니까?', '확인');
 ```
+
+### 4.1 Element Plus `ElMessage` / `ElMessageBox` (ES 모듈 필수)
+
+`type="module"` 로 로드되는 **각 파일**(`app.js`, `composables/*.js`, `components/**/*.js`, `views/**/*.js`)에서 메시지·확인창을 쓸 때는 **`window`에 붙이지 않고**, 해당 파일 **최상단**(import 다음, `export`/`setup`보다 앞)에서 전역 `ElementPlus`를 구조 분해한다.
+
+```javascript
+// 메시지만 사용하는 파일
+const { ElMessage } = ElementPlus;
+ElMessage.success('저장되었습니다.');
+ElMessage.error('실패했습니다.');
+
+// 확인창까지 사용하는 파일
+const { ElMessage, ElMessageBox } = ElementPlus;
+ElMessageBox.confirm('삭제하시겠습니까?', '확인', { type: 'warning' })
+  .then(() => { /* 확인 */ })
+  .catch(() => { /* 취소 */ });
+```
+
+- **금지**: `index.html`에서 `window.ElMessage = …` 로 우회 후, 모듈에서 전역 식별자만 참조하는 방식 (명시적 출처가 없어 유지보수·린트에 불리함)
+- **허용**: `import { ElMessage } from 'element-plus'` 같은 npm 스타일 import는 여전히 금지(이 절 하단 표). 반드시 `const { … } = ElementPlus` 사용
 
 **로컬 파일 import** (`type="module"` 환경, 허용):
 ```javascript
@@ -250,8 +268,9 @@ http://localhost:3000 접속 → Vue Router 초기화 → beforeEach 가드
 
 ## 11. 에러 처리 및 품질 기준
 
-**모든 API 호출 필수 적용**:
+**모든 API 호출 필수 적용** (`ElMessage`는 파일 상단에 `const { ElMessage } = ElementPlus;` 선언):
 ```javascript
+const { ElMessage } = ElementPlus;
 const loading = ref(false);
 try {
     loading.value = true;
@@ -271,6 +290,7 @@ try {
 - [ ] index.html: CDN 로딩 순서 준수 (Vue → VueRouter → ElementPlus → Axios)
 - [ ] Vue 3: `const { defineComponent } = Vue;` 전역 변수 사용
 - [ ] CDN 라이브러리: `VueRouter`, `ElementPlus` 전역 접근 (npm import 금지)
+- [ ] Element Plus: `ElMessage` / `ElMessageBox`는 각 ES 모듈 파일에서 `const { … } = ElementPlus` 구조 분해 (`window.ElMessage` 미사용)
 - [ ] 로컬 파일: `import { useCrud } from '...'` (type="module" 내 로컬 import OK)
 - [ ] 라우팅: `createWebHashHistory` 사용, 모든 라우트 `router.js` 중앙 등록
 - [ ] 신규 모듈 메뉴: `sidebar.js`에 등록
